@@ -234,6 +234,7 @@ function colaboradores_admin_scripts($hook) {
 }
 add_action('admin_enqueue_scripts', 'colaboradores_admin_scripts');
 
+
 /****Rest API***
 http://localhost/cenoura/wp-json/custom/v1/colaboradores
 */
@@ -286,3 +287,145 @@ function get_all_colaboradores_posts($data) {
     // Retorna os posts como JSON
     return rest_ensure_response($posts_data);
 }
+
+
+
+// Renderiza a página de configurações personalizada
+function custom_settings_page_html() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    // Exibe a notificação de sucesso de alteração nas configurações
+    if (isset($_GET['settings-updated'])) {
+        add_settings_error('custom_messages', 'custom_message', 'Configurações salvas', 'updated');
+    }
+    settings_errors('custom_messages');
+    
+    // Formulário HTML
+    echo '<div class="wrap">';
+    echo '<h1>Localização e Contato</h1>';
+    echo '<form action="options.php" method="post" enctype="multipart/form-data">';
+    
+    // Configurações gerais
+    settings_fields('custom_settings');
+    do_settings_sections('custom-settings');
+    submit_button();
+    
+    echo '</form>';
+    echo '</div>';
+}
+
+
+// 
+/****************Registra as configurações e os campos****************** */
+/// Registra as configurações e adiciona os campos na página de Configurações Gerais
+
+
+// Função de callback para o campo de upload de imagem de Marca
+// Registra as configurações e adiciona os campos na página de Configurações Gerais
+function custom_general_settings_register_fields() {
+    // Adiciona o campo de upload de imagem para Marca
+    add_settings_field(
+        'custom_brand',                           // ID do campo
+        'Marca (Imagem)',                         // Título do campo
+        'custom_brand_field_cb',                  // Função de callback para renderizar o campo
+        'general'                                 // Página do menu ("general" é para Configurações Gerais)
+    );
+    register_setting('general', 'custom_brand'); // Registra a configuração para o campo
+
+    // Adiciona o campo de Endereço com editor de texto
+    add_settings_field(
+        'custom_address',                         // ID do campo
+        'Endereço',                               // Título do campo
+        'custom_address_field_cb',                // Função de callback para renderizar o campo
+        'general'                                 // Página do menu
+    );
+    register_setting('general', 'custom_address'); // Registra a configuração para o campo
+
+    // Adiciona o campo de Telefone
+    add_settings_field(
+        'custom_phone',                           // ID do campo
+        'Telefone',                               // Título do campo
+        'custom_phone_field_cb',                  // Função de callback para renderizar o campo
+        'general'                                 // Página do menu
+    );
+    register_setting('general', 'custom_phone');  // Registra a configuração para o campo
+
+    // Adiciona o campo de E-mail
+    add_settings_field(
+        'custom_email',                           // ID do campo
+        'E-mail',                                 // Título do campo
+        'custom_email_field_cb',                  // Função de callback para renderizar o campo
+        'general'                                 // Página do menu
+    );
+    register_setting('general', 'custom_email');  // Registra a configuração para o campo
+}
+add_action('admin_init', 'custom_general_settings_register_fields');
+
+// Função de callback para o campo de upload de imagem de Marca
+function custom_brand_field_cb() {
+    $brand = get_option('custom_brand');
+    $image_url = $brand ? wp_get_attachment_url($brand) : '';
+    ?>
+    <div>
+        <img id="brand-image" src="<?php echo esc_url($image_url); ?>" style="max-width: 150px; display: <?php echo $image_url ? 'block' : 'none'; ?>;" />
+        <input type="hidden" id="custom_brand" name="custom_brand" value="<?php echo esc_attr($brand); ?>" />
+        <button type="button" class="button" id="upload-brand-button">Upload Imagem</button>
+        <button type="button" class="button" id="remove-brand-button" style="display: <?php echo $image_url ? 'inline-block' : 'none'; ?>;">Remover Imagem</button>
+    </div>
+    <script>
+        jQuery(document).ready(function ($) {
+            var mediaUploader;
+
+            $('#upload-brand-button').click(function (e) {
+                e.preventDefault();
+                if (mediaUploader) {
+                    mediaUploader.open();
+                    return;
+                }
+                mediaUploader = wp.media({
+                    title: 'Escolher Imagem',
+                    button: {
+                        text: 'Escolher Imagem'
+                    },
+                    multiple: false
+                });
+                mediaUploader.on('select', function () {
+                    var attachment = mediaUploader.state().get('selection').first().toJSON();
+                    $('#custom_brand').val(attachment.id);
+                    $('#brand-image').attr('src', attachment.url).show();
+                    $('#remove-brand-button').show();
+                });
+                mediaUploader.open();
+            });
+
+            $('#remove-brand-button').click(function (e) {
+                e.preventDefault();
+                $('#custom_brand').val('');
+                $('#brand-image').hide();
+                $(this).hide();
+            });
+        });
+    </script>
+    <?php
+}
+
+// Função de callback para o campo de Endereço com editor de texto
+function custom_address_field_cb() {
+    $address = get_option('custom_address');
+    wp_editor($address, 'custom_address', array('textarea_name' => 'custom_address'));
+}
+
+// Função de callback para o campo de Telefone
+function custom_phone_field_cb() {
+    $phone = get_option('custom_phone');
+    echo '<input type="text" name="custom_phone" value="' . esc_attr($phone) . '" />';
+}
+
+// Função de callback para o campo de E-mail
+function custom_email_field_cb() {
+    $email = get_option('custom_email');
+    echo '<input type="email" name="custom_email" value="' . esc_attr($email) . '" />';
+}
+
