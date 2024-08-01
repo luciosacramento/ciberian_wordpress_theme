@@ -1,6 +1,5 @@
 <?php
 
-
 header("Content-Type: application/json");
 
 
@@ -30,406 +29,260 @@ function ocultar_tipo_de_post_do_menu() {
 
 add_action('admin_menu', 'ocultar_tipo_de_post_do_menu');
 
-/****************Post customizado LOJAS****************** */
+/****************Post customizado Soluções****************** */
 
-function registrar_lojas() {
+function create_solucoes_post_type() {
     $labels = array(
-        'name'               => 'Lojas',
-        'singular_name'      => 'Loja',
-        'menu_name'          => 'Lojas',
-        'name_admin_bar'     => 'Lojas',
-        'add_new'            => 'Adicionar Novo',
-        'add_new_item'       => 'Adicionar Novo loja',
-        'new_item'           => 'Novo loja',
-        'edit_item'          => 'Editar loja',
-        'view_item'          => 'Visualizar  loja',
-        'all_items'          => 'Todos os loja',
-        'search_items'       => 'Pesquisar loja',
-        'parent_item_colon'  => 'Meus loja Pai:',
-        'not_found'          => 'Nenhum loja encontrado.',
-        'not_found_in_trash' => 'Nenhum loja encontrado na lixeira.'
+        'name'                  => _x('Soluções', 'Post Type General Name', 'textdomain'),
+        'singular_name'         => _x('Solução', 'Post Type Singular Name', 'textdomain'),
+        'menu_name'             => __('Soluções', 'textdomain'),
+        'name_admin_bar'        => __('Solução', 'textdomain'),
+        'archives'              => __('Arquivos de Soluções', 'textdomain'),
+        'attributes'            => __('Atributos de Soluções', 'textdomain'),
+        'parent_item_colon'     => __('Solução Pai:', 'textdomain'),
+        'all_items'             => __('Todas Soluções', 'textdomain'),
+        'add_new_item'          => __('Adicionar Nova Solução', 'textdomain'),
+        'add_new'               => __('Adicionar Novo', 'textdomain'),
+        'new_item'              => __('Nova Solução', 'textdomain'),
+        'edit_item'             => __('Editar Solução', 'textdomain'),
+        'update_item'           => __('Atualizar Solução', 'textdomain'),
+        'view_item'             => __('Ver Solução', 'textdomain'),
+        'view_items'            => __('Ver Soluções', 'textdomain'),
+        'search_items'          => __('Buscar Solução', 'textdomain'),
+        'not_found'             => __('Não encontrado', 'textdomain'),
+        'not_found_in_trash'    => __('Não encontrado no Lixo', 'textdomain'),
+        'featured_image'        => __('Imagem Destaque', 'textdomain'),
+        'set_featured_image'    => __('Definir imagem destaque', 'textdomain'),
+        'remove_featured_image' => __('Remover imagem destaque', 'textdomain'),
+        'use_featured_image'    => __('Usar como imagem destaque', 'textdomain'),
+        'insert_into_item'      => __('Inserir na Solução', 'textdomain'),
+        'uploaded_to_this_item' => __('Enviado para esta Solução', 'textdomain'),
+        'items_list'            => __('Lista de Soluções', 'textdomain'),
+        'items_list_navigation' => __('Navegação da lista de Soluções', 'textdomain'),
+        'filter_items_list'     => __('Filtrar lista de Soluções', 'textdomain'),
     );
 
     $args = array(
-        'labels'             => $labels,
-        'public'             => true,
-        'publicly_queryable' => true,
-        'show_ui'            => true,
-        'show_in_menu'       => true,
-        'query_var'          => true,
-        'rewrite'            => array( 'slug' => 'lojas' ),
-        'capability_type'    => 'post',
-        'has_archive'        => true,
-        'hierarchical'       => false,
-        'menu_position'      => null,
-        'supports'           => array( 'title',  'thumbnail' ),
+        'label'                 => __('Solução', 'textdomain'),
+        'description'           => __('Tipo de post para soluções', 'textdomain'),
+        'labels'                => $labels,
+        'supports'              => array('title', 'editor', 'thumbnail'),
+        'hierarchical'          => false,
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => true,
+        'menu_position'         => 5,
+        'show_in_admin_bar'     => true,
+        'show_in_nav_menus'     => true,
+        'can_export'            => true,
+        'has_archive'           => true,
+        'exclude_from_search'   => false,
+        'publicly_queryable'    => true,
+        'capability_type'       => 'post',
     );
 
-    register_post_type( 'lojas', $args );
+    register_post_type('solucoes', $args);
 }
-add_action( 'init', 'registrar_lojas' );
+add_action('init', 'create_solucoes_post_type', 0);
 
-function adicionar_campos_personalizados() {
-    add_meta_box(
-        'meus_campos',
-        'Meus Campos Personalizados',
-        'exibir_campos_personalizados',
-        'lojas',
-        'normal',
-        'default'
+
+/****Rest API***
+http://localhost/cenoura/wp-json/custom/v1/solucoes
+*/
+
+// Função para registrar a rota da API REST
+function register_solucoes_rest_route() {
+    register_rest_route('custom/v1', '/solucoes/', array(
+        'methods'  => 'GET',
+        'callback' => 'get_all_solucoes_posts',
+    ));
+}
+add_action('rest_api_init', 'register_solucoes_rest_route');
+
+// Função de callback para retornar os posts do tipo Soluções
+function get_all_solucoes_posts($data) {
+    // Argumentos para a consulta WP_Query
+    $args = array(
+        'post_type'      => 'solucoes',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,  // Retorna todos os posts
     );
-}
-add_action( 'add_meta_boxes', 'adicionar_campos_personalizados' );
-add_action( 'save_post', 'myplugin_save_postdata' );
 
-function exibir_campos_personalizados( $post ) {
-    // Recupere os valores salvos dos campos personalizados
+    // Consulta WP_Query
+    $query = new WP_Query($args);
 
-    $area_atuacao = get_post_meta( $post->ID, 'area_atuacao', true );
-    $rede_social = get_post_meta( $post->ID, 'rede_social', true );
-    $link_rede_social = get_post_meta( $post->ID, 'link_rede_social', true );
-    $tipo_rede_social = get_post_meta( $post->ID, 'tipo_rede_social', true );
-    $telefone = get_post_meta( $post->ID, 'telefone', true );
+    // Array para armazenar os resultados
+    $posts_data = array();
 
-    
-    ?>
-     
-    <label for="area_atuacao">Área:</label><br>
-    <input type="text" id="area_atuacao" name="area_atuacao" value="<?php echo esc_attr( $area_atuacao ); ?>" /><br><br>
+    // Percorre os posts retornados pela consulta
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
 
-    <label for="rede_social">Rede social:</label><br>
-    <input type="text" id="rede_social" name="rede_social" value="<?php echo esc_attr( $rede_social ); ?>" /><br><br>
-
-    <label for="link_rede_social">link da Rede Social:</label><br>
-    <input type="text" id="link_rede_social" name="link_rede_social" value="<?php echo esc_attr( $link_rede_social ); ?>" /><br><br>
-
-    <label for="tipo_rede_social">Tipo da Rede Social:</label><br>
-    <select id="tipo_rede_social" name="tipo_rede_social">
-        <option value="instagram" <?php selected( $tipo_rede_social, 'instagram' ); ?>>Instagram</option>
-        <option value="facebook" <?php selected( $tipo_rede_social, 'facebook' ); ?>>Facebook</option>
-        <option value="site" <?php selected( $tipo_rede_social, 'site' ); ?>>Site</option>
-        <option value="twitter" <?php selected( $tipo_rede_social, 'twitter' ); ?>>Twitter</option>
-    </select><br><br>
-
-    <label for="telefone">Telefone:</label><br>
-    <input type="text" id="telefone" name="telefone" value="<?php echo esc_attr( $telefone ); ?>" /><br><br>
-
-
-    <?php
-}
-
-/* When the post is saved, saves our custom data */
-function myplugin_save_postdata( $post_id ) {
-
-
-
-    // verify if this is an auto save routine. 
-    // If it is our form has not been submitted, so we dont want to do anything
-    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
-        return;
-  
-    // verify this came from the our screen and with proper authorization,
-    // because save_post can be triggered at other times
-    if ( ( isset ( $_POST['myplugin_noncename'] ) ) && ( ! wp_verify_nonce( $_POST['myplugin_noncename'], plugin_basename( __FILE__ ) ) ) )
-        return;
-  
-    // Check permissions
-    if ( ( isset ( $_POST['post_type'] ) ) && ( 'lojas' == $_POST['post_type'] )  ) {
-      if ( ! current_user_can( 'edit_page', $post_id ) ) {
-        return;
-      }    
-    }
-    else {
-      if ( ! current_user_can( 'edit_post', $post_id ) ) {
-        return;
-      }
-    }
-
-    $fields = array( 'area_atuacao','rede_social', 'link_rede_social', 'tipo_rede_social','telefone');
-    foreach ($fields as $key => $value) {
-        if ($value === 'tipo_rede_social') {
-            // Lidar com o campo tipo_rede_social como um campo de seleção (select)
-            if ( isset( $_POST['tipo_rede_social'] ) ) {
-                update_post_meta( $post_id, 'tipo_rede_social', sanitize_text_field( $_POST['tipo_rede_social'] ) );
-            }
-        } else {
-            // Lidar com os outros campos como antes
-            updateCustomField($value,$post_id);
+            // Adiciona cada post ao array
+            $posts_data[] = array(
+                'ID'           => get_the_ID(),
+                'title'        => get_the_title(),
+                'description'  => get_the_content(),
+                'image_url'    => get_the_post_thumbnail_url(get_the_ID(), 'full'),
+            );
         }
-    }   
-  
-  }
-
-  function updateCustomField($slug,$post_id){
-    if ( isset ( $_POST[$slug] ) ) {
-        update_post_meta( $post_id, $slug, $_POST[$slug] );
-    }
-  }
-
-  /****************FIM - Post customizado LOJAS****************** */
- 
-  /****************Adicionando campo personalizados em Configurações****************** */
-
-    // Função para exibir os campos personalizados no formulário de configurações
-function exibir_campos_personalizados_configuracao() {
-    ?>
-    <h2>Configurações Personalizadas</h2>
-    <form action="options.php" method="post">
-        <?php settings_fields( 'configuracoes-personalizadas' ); ?>
-        <?php do_settings_sections( 'configuracoes-personalizadas' ); ?>
-        <table class="form-table">
-            <tr valign="top">
-                <th scope="row">Email:</th>
-                <td><input type="text" name="email_field" value="<?php echo esc_attr( get_option( 'email_field' ) ); ?>" /></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Telefone:</th>
-                <td><input type="text" name="telefone_field" value="<?php echo esc_attr( get_option( 'telefone_field' ) ); ?>" /></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">instagram:</th>
-                <td><textarea name="instagram_field"><?php echo esc_textarea( get_option( 'instagram_field' ) ); ?></textarea></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Endereço:</th>
-                <td><textarea name="endereco_field"><?php echo esc_textarea( get_option( 'endereco_field' ) ); ?></textarea></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Mapa:</th>
-                <td><textarea name="mapa_field" ><?php echo esc_attr( get_option( 'mapa_field' ) ); ?></textarea></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Horário de funcionamento:</th>
-                <td><textarea name="horario_funcionamento_field"><?php echo esc_attr( get_option( 'horario_funcionamento_field' ) ); ?></textarea></td>
-            </tr>
-           
-        </table>
-        <?php submit_button(); ?>
-    </form>
-    <?php
-}
-
-// Adicionar as configurações personalizadas ao menu
-function adicionar_pagina_configuracoes_personalizadas() {
-    add_options_page( 'Configurações Personalizadas', 'Configurações Personalizadas', 'manage_options', 'configuracoes-personalizadas', 'exibir_campos_personalizados_configuracao' );
-}
-add_action( 'admin_menu', 'adicionar_pagina_configuracoes_personalizadas' );
-
-// Registrar os campos personalizados e seus valores
-function registrar_campos_personalizados() {
-    // Registrar campos para salvar
-    register_setting( 'configuracoes-personalizadas', 'email_field' );
-    register_setting( 'configuracoes-personalizadas', 'telefone_field' );
-    register_setting( 'configuracoes-personalizadas', 'instagram_field' );
-    register_setting( 'configuracoes-personalizadas', 'endereco_field' );
-    register_setting( 'configuracoes-personalizadas', 'horario_funcionamento_field' );
-    register_setting( 'configuracoes-personalizadas', 'mapa_field' );
-}
-add_action( 'admin_init', 'registrar_campos_personalizados' );
-
-// Funções para exibir os campos nos formulários
-function exibir_email_field() {
-    echo '<input type="text" name="email_field" value="' . esc_attr( get_option( 'email_field' ) ) . '" />';
-}
-function exibir_telefone_field() {
-    echo '<input type="text" name="telefone_field" value="' . esc_attr( get_option( 'telefone_field' ) ) . '" />';
-}
-function exibir_instagram_field() {
-    echo '<textarea name="instagram_field">' . esc_textarea( get_option( 'instagram_field' ) ) . '</textarea>';
-}
-function exibir_endereco_field() {
-    echo '<textarea name="endereco_field">'.esc_textarea( get_option( 'endereco_field' ) ).'</textarea>';
-}
-function exibir_horario_funcionamento_field() {
-    echo '<textarea name="horario_funcionamento_field" >' . esc_attr( get_option( 'horario_funcionamento_field' ) ) . '</textarea>';
-}
-function exibir_mapa_field() {
-    echo '<textarea name="mapa_field">' . esc_attr( get_option( 'mapa_field' ) ) . '</textarea>';
-}
-
-
-  /****************FIM - Adicionando campo personalizados em Configurações****************** */
-
-  /**************** Rest API LOJAS****************** */
-
-  function adicionar_cors_headers() {
-    header( 'Access-Control-Allow-Origin: *' );
-    header( 'Access-Control-Allow-Methods: GET,POST' );
-    header( 'Access-Control-Allow-Credentials: true' );
-    header( 'Access-Control-Expose-Headers: Link' );
-}
-
-add_action( 'rest_api_init', function() {
-    add_filter( 'rest_pre_serve_request', 'adicionar_cors_headers' );
-}, 15 );
-
- function registrar_endpoint_lojas() {
-    register_rest_route('lojas/v1', '/lista/', array(
-        'methods' => 'GET',
-        'callback' => 'obter_lojas',
-        'args' => array(
-            'busca' => array(
-                'validate_callback' => function($param, $request, $key) {
-                    return is_string($param);
-                }
-            ),
-        ),
-    ));
-    register_rest_route('lojas/v1', '/pagina/', array(
-        'methods' => 'GET',
-        'callback' => 'obter_pagina_por_id',
-        'args' => array(
-            'id' => array(
-                'validate_callback' => function($param, $request, $key) {
-                    return is_string($param);
-                }
-            ),
-        ),
-    ));
-
-    register_rest_route('lojas/v1', '/configuracoes-personalizadas/', array(
-        'methods' => 'GET',
-        'callback' => 'obter_configuracoes_personalizadas',
-    ));
-
-    register_rest_route( 'lojas/v1', '/enviar-email/', array(
-        'methods' => 'POST',
-        'callback' => 'enviar_email',
-        'args' => array(
-            'remetente' => array(
-                'required' => true,
-                'validate_callback' => function($param, $request, $key) {
-                    return is_email($param);
-                }
-            ),
-            'telefone' => array(
-                'required' => false,
-            ),
-            'nome' => array(
-                'required' => false,
-            ),
-            'mensagem' => array(
-                'required' => true,
-            ),
-        ),
-    ) );
-
-}
-
-add_action('rest_api_init', 'registrar_endpoint_lojas');
-
-function obter_lojas($data) {
-
-    if($data['busca'] && $data['busca'] != ''){
-        $busca = $data['busca'];
-        $args = array(
-            'post_type' => 'lojas',
-            'posts_per_page' => -1,
-            'post_status' => 'publish', 
-            's' => $busca // Realiza a pesquisa no título e conteúdo do post
-        );
-    
-        $lojas = get_posts($args);
-    
-        $args = array(
-            'post_type' => 'lojas',
-            'posts_per_page' => -1,
-            'meta_query' => array(
-                array(
-                    'key' => 'area_atuacao',
-                    'value' => $busca,
-                    'compare' => 'LIKE',
-                ),
-            ),
-            'post_status' => 'publish', 
-        );
-    
-        $lojas2 = get_posts($args);
-    
-        $lojas = array_merge( $lojas2, $lojas );
-    
-        $lojas = array_unique($lojas);
-    }else{
-        $args = array(
-            'post_type' => 'lojas',
-            'posts_per_page' => -1,
-            'post_status' => 'publish', 
-        );
-        $lojas = get_posts($args);
-
+        wp_reset_postdata();
     }
 
-    $resposta = array();
-
-    foreach ($lojas as $loja) {
-        $imagem_url = get_the_post_thumbnail_url($loja->ID);
-        $resposta[] = array(
-            'id' => $loja->ID,
-            'titulo' => $loja->post_title,
-            'area_atuacao' => get_post_meta($loja->ID, 'area_atuacao', true),
-            'imagem_url' => $imagem_url,
-            'rede_social' => get_post_meta($loja->ID, 'rede_social', true),
-            'link_rede_social' => get_post_meta($loja->ID, 'link_rede_social', true),
-            'tipo_rede_social' => get_post_meta($loja->ID, 'tipo_rede_social', true),
-            'telefone' => get_post_meta($loja->ID, 'telefone', true),
-        );
-    }
-
-    return rest_ensure_response($resposta);
+    // Retorna os posts como JSON
+    return rest_ensure_response($posts_data);
 }
 
-function obter_pagina_por_id($data) {
-    $pagina_id = $data['id'];
-    $pagina = get_post($pagina_id);
+/****************Post customizado Colaboradores****************** */
 
-    if ($pagina) {
-        $resposta = array(
-            'id' => $pagina->ID,
-            'titulo' => $pagina->post_title,
-            'conteudo' => apply_filters('the_content', $pagina->post_content),
-            // Adicione outros campos personalizados conforme necessário
-        );
-        return rest_ensure_response($resposta);
+// Registrar o tipo de conteúdo "Colaboradores"
+function create_colaboradores_post_type() {
+    register_post_type('colaboradores',
+        array(
+            'labels' => array(
+                'name' => __('Colaboradores'),
+                'singular_name' => __('Colaborador')
+            ),
+            'public' => true,
+            'has_archive' => true,
+            'supports' => array('title', 'editor', 'thumbnail'), // Título, descrição e imagem
+            'rewrite' => array('slug' => 'colaboradores'),
+        )
+    );
+}
+add_action('init', 'create_colaboradores_post_type');
+
+// Adicionar metabox para as redes sociais
+function colaboradores_socials_metabox() {
+    add_meta_box(
+        'colaboradores_redes_sociais', 
+        'Redes Sociais', 
+        'colaboradores_redes_sociais_callback', 
+        'colaboradores',
+        'normal', 
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'colaboradores_socials_metabox');
+
+// Callback da metabox das redes sociais
+function colaboradores_redes_sociais_callback($post) {
+    wp_nonce_field('save_colaboradores_redes_sociais', 'colaboradores_redes_sociais_nonce');
+
+    $redes_sociais = get_post_meta($post->ID, 'colaboradores_redes_sociais', true);
+
+    echo '<div id="redes-sociais-wrapper">';
+    if (!empty($redes_sociais) && is_array($redes_sociais)) {
+        foreach ($redes_sociais as $rede) {
+            echo '<div class="rede-social">
+                    <label>Nome:</label>
+                    <input type="text" name="colaboradores_redes_sociais_nome[]" value="' . esc_attr($rede['nome']) . '" />
+                    <label>URL:</label>
+                    <input type="url" name="colaboradores_redes_sociais_url[]" value="' . esc_attr($rede['url']) . '" />
+                    <button type="button" class="remove-social">Remover</button>
+                  </div>';
+        }
+    }
+    echo '</div>';
+    echo '<button type="button" id="add-rede-social">Adicionar Rede Social</button>';
+}
+
+// Salvar as redes sociais ao salvar o post
+function save_colaboradores_redes_sociais($post_id) {
+    if (!isset($_POST['colaboradores_redes_sociais_nonce']) ||
+        !wp_verify_nonce($_POST['colaboradores_redes_sociais_nonce'], 'save_colaboradores_redes_sociais')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    if (isset($_POST['colaboradores_redes_sociais_nome']) && isset($_POST['colaboradores_redes_sociais_url'])) {
+        $redes_sociais = array();
+        $nomes = $_POST['colaboradores_redes_sociais_nome'];
+        $urls = $_POST['colaboradores_redes_sociais_url'];
+
+        foreach ($nomes as $index => $nome) {
+            if (!empty($nome) && !empty($urls[$index])) {
+                $redes_sociais[] = array(
+                    'nome' => sanitize_text_field($nome),
+                    'url' => esc_url_raw($urls[$index])
+                );
+            }
+        }
+
+        update_post_meta($post_id, 'colaboradores_redes_sociais', $redes_sociais);
     } else {
-        return new WP_Error('nao_encontrado', 'Página não encontrada', array('status' => 404));
+        delete_post_meta($post_id, 'colaboradores_redes_sociais');
     }
 }
+add_action('save_post', 'save_colaboradores_redes_sociais');
 
-function obter_configuracoes_personalizadas() {
-    $configuracoes = array(
-        'email' => get_option('email_field'),
-        'telefone' => get_option('telefone_field'),
-        'instagram' => get_option('instagram_field'),
-        'endereco' => get_option('endereco_field'),
-        'horario_funcionamento' => get_option('horario_funcionamento_field'),
-        'mapa' => get_option('mapa_field'),
+// Adicionando o JavaScript para manipular o campo de redes sociais
+function colaboradores_admin_scripts($hook) {
+    if ('post.php' != $hook && 'post-new.php' != $hook) {
+        return;
+    }
+
+    wp_enqueue_script('colaboradores-admin-js', get_template_directory_uri() . '/colaboradores-admin.js', array('jquery'), '1.0', true);
+}
+add_action('admin_enqueue_scripts', 'colaboradores_admin_scripts');
+
+/****Rest API***
+http://localhost/cenoura/wp-json/custom/v1/colaboradores
+*/
+// Registrar o tipo de conteúdo "Colaboradores"
+// Função para registrar a rota da API REST
+function register_colaboradores_rest_route() {
+    register_rest_route('custom/v1', '/colaboradores/', array(
+        'methods'  => 'GET',
+        'callback' => 'get_all_colaboradores_posts',
+    ));
+}
+
+add_action('rest_api_init', 'register_colaboradores_rest_route');
+
+// Função de callback para retornar os posts do tipo Colaboradores
+function get_all_colaboradores_posts($data) {
+    // Argumentos para a consulta WP_Query
+    $args = array(
+        'post_type'      => 'colaboradores',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,  // Retorna todos os posts
     );
 
-    return rest_ensure_response($configuracoes);
-}
+    // Consulta WP_Query
+    $query = new WP_Query($args);
 
-add_filter('wp_mail_content_type', function( $content_type ) {
-    return 'text/html';
-});
+    // Array para armazenar os resultados
+    $posts_data = array();
 
-function enviar_email( $data ) {
-    $from = $data['remetente'];
-    $telefone = $data['telefone'];
-    $nome = $data['nome'];
-    $to = get_option('email_field');
-    $message = $data['mensagem'].'<br><br>De: '.$nome.'<br><br>Telefone: '.$telefone;
+    // Percorre os posts retornados pela consulta
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
 
-    $headers = "From: $nome <$from>". "\r\n" .
-               "Reply-To: $from" . "\r\n" .
-               "X-Mailer: PHP/" . phpversion();
+            // Captura as redes sociais, se houver
+            $social_media = get_post_meta(get_the_ID(), 'colaboradores_redes_sociais', true);
 
-    $result = wp_mail( $to, "Mensagem enviada do site por ".$nome, $message, $headers );
-
-    if ( $result ) {
-        return rest_ensure_response( array( 'message' => 'E-mail enviado com sucesso!','status' => 'ok' ) );
-    } else {
-        return rest_ensure_response( array( 'message' => 'Falha ao enviar o e-mail.','status' => 'error' ) );
+            // Adiciona cada post ao array
+            $posts_data[] = array(
+                'ID'           => get_the_ID(),
+                'title'        => get_the_title(),
+                'description'  => get_the_content(),
+                'image_url'    => get_the_post_thumbnail_url(get_the_ID(), 'full'),
+                'social_media' => !empty($social_media) ? $social_media : array(),  // Inclui as redes sociais, se houver
+            );
+        }
+        wp_reset_postdata();
     }
-}
 
- /**************** FIM - Rest API LOJAS****************** */
+    // Retorna os posts como JSON
+    return rest_ensure_response($posts_data);
+}
