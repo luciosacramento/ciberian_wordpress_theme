@@ -316,7 +316,6 @@ function custom_settings_page_html() {
     echo '</div>';
 }
 
-
 // 
 /****************Registra as configurações e os campos****************** */
 /// Registra as configurações e adiciona os campos na página de Configurações Gerais
