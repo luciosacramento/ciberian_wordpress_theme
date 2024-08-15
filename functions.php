@@ -29,6 +29,170 @@ function ocultar_tipo_de_post_do_menu() {
 
 add_action('admin_menu', 'ocultar_tipo_de_post_do_menu');
 
+/****************Post customizado Documentos****************** */
+
+function create_documentos_post_type() {
+    $labels = array(
+        'name'                  => _x('Documentos', 'Post Type General Name', 'textdomain'),
+        'singular_name'         => _x('Documento', 'Post Type Singular Name', 'textdomain'),
+        'menu_name'             => __('Documentos', 'textdomain'),
+        'name_admin_bar'        => __('Documento', 'textdomain'),
+        'archives'              => __('Arquivos de Documentos', 'textdomain'),
+        'attributes'            => __('Atributos de Documentos', 'textdomain'),
+        'parent_item_colon'     => __('Documento Pai:', 'textdomain'),
+        'all_items'             => __('Todas Documentos', 'textdomain'),
+        'add_new_item'          => __('Adicionar Nova Documento', 'textdomain'),
+        'add_new'               => __('Adicionar Novo', 'textdomain'),
+        'new_item'              => __('Nova Documento', 'textdomain'),
+        'edit_item'             => __('Editar Documento', 'textdomain'),
+        'update_item'           => __('Atualizar Documento', 'textdomain'),
+        'view_item'             => __('Ver Documento', 'textdomain'),
+        'view_items'            => __('Ver Documentos', 'textdomain'),
+        'search_items'          => __('Buscar Documento', 'textdomain'),
+        'not_found'             => __('Não encontrado', 'textdomain'),
+        'not_found_in_trash'    => __('Não encontrado no Lixo', 'textdomain'),
+        'featured_image'        => __('Imagem Destaque', 'textdomain'),
+        'set_featured_image'    => __('Definir imagem destaque', 'textdomain'),
+        'remove_featured_image' => __('Remover imagem destaque', 'textdomain'),
+        'use_featured_image'    => __('Usar como imagem destaque', 'textdomain'),
+        'insert_into_item'      => __('Inserir na Documento', 'textdomain'),
+        'uploaded_to_this_item' => __('Enviado para esta Documento', 'textdomain'),
+        'items_list'            => __('Lista de Documentos', 'textdomain'),
+        'items_list_navigation' => __('Navegação da lista de Documentos', 'textdomain'),
+        'filter_items_list'     => __('Filtrar lista de Documentos', 'textdomain'),
+    );
+
+    $args = array(
+        'label'                 => __('Documento', 'textdomain'),
+        'description'           => __('Tipo de post para Documentos', 'textdomain'),
+        'labels'                => $labels,
+        'supports'              => array('title', 'thumbnail'),
+        'hierarchical'          => false,
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => true,
+        'menu_position'         => 5,
+        'show_in_admin_bar'     => true,
+        'show_in_nav_menus'     => true,
+        'can_export'            => true,
+        'has_archive'           => true,
+        'exclude_from_search'   => false,
+        'publicly_queryable'    => true,
+        'capability_type'       => 'post',
+        
+    );
+
+    register_post_type('documentos', $args);
+}
+add_action('init', 'create_documentos_post_type', 0);
+
+
+function add_documento_metabox() {
+    add_meta_box(
+        'documento_upload',
+        'Upload de Documento',
+        'documento_upload_callback',
+        'documentos',
+        'normal', 
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'add_documento_metabox');
+
+function documento_upload_callback($post) {
+    wp_nonce_field(basename(__FILE__), 'documento_nonce');
+    $file_id = get_post_meta($post->ID, 'documento_upload', true);
+    ?>
+    <input type="hidden" name="documento_upload" id="documento_upload_" value="<?php echo $file_id; ?>" />
+    <input type="button" class="button button-secondary" id="upload_documento_button" value="Selecionar Documento" />
+    <div id="documento_preview"><a target="_blank" href="<?php echo wp_get_attachment_url( $file_id ); ?>"><?php echo(basename( get_attached_file( $file_id ) ));?></a></div>
+    <script>
+        jQuery(document).ready(function($) {
+            $('#upload_documento_button').click(function() {
+                var file_frame = wp.media.frames.file_frame = wp.media({
+                    title: '<?php _e('Selecionar Documento', 'textdomain'); ?>',
+                    button: {
+                        text: '<?php _e('Selecionar Documento', 'textdomain'); ?>'
+                    },
+                    multiple: false
+                });
+
+                file_frame.on('select', function() {
+                    attachment = file_frame.state().get('selection').first().toJSON();
+                    console.log(attachment);
+                    document.getElementById('documento_upload_').value = attachment.id;
+                    $('#documento_preview').html('<p><a target="_blank" href"'+attachment.url+'>' + attachment.title + '</a></p>');
+                });
+
+                file_frame.open();
+            });
+        });
+    </script>
+    <?php
+}
+
+function save_documento_meta($post_id) {
+    echo($post_id);
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+    if (!isset($_POST['documento_nonce']) || !wp_verify_nonce($_POST['documento_nonce'], basename(__FILE__))) return;
+    if (isset($_POST['documento_upload'])) {
+        echo($_POST['documento_upload']);
+        update_post_meta($post_id, 'documento_upload', $_POST['documento_upload']);
+    }
+}
+add_action('save_post', 'save_documento_meta');
+
+/****Rest API***
+http://localhost/cenoura/wp-json/custom/v1/documentos
+*/
+
+// Função para registrar a rota da API REST
+function register_documentos_rest_route() {
+    register_rest_route('custom/v1', '/documentos/', array(
+        'methods'  => 'GET',
+        'callback' => 'get_all_documentos_posts',
+    ));
+}
+add_action('rest_api_init', 'register_documentos_rest_route');
+
+// Função de callback para retornar os posts do tipo Soluções
+function get_all_documentos_posts($data) {
+    // Argumentos para a consulta WP_Query
+    $args = array(
+        'post_type'      => 'documentos',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,  // Retorna todos os posts
+    );
+
+    // Consulta WP_Query
+    $query = new WP_Query($args);
+
+    // Array para armazenar os resultados
+    $posts_data = array();
+
+    // Percorre os posts retornados pela consulta
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+
+            $documento = wp_get_attachment_url( get_post_meta(get_the_ID(), 'documento_upload', true));
+
+            // Adiciona cada post ao array
+            $posts_data[] = array(
+                'ID'           => get_the_ID(),
+                'title'        => get_the_title(),
+                'image_url'    => get_the_post_thumbnail_url(get_the_ID(), 'full'),
+                'documento'    => !empty($documento) ? $documento : null,
+            );
+        }
+        wp_reset_postdata();
+    }
+
+    // Retorna os posts como JSON
+    return rest_ensure_response($posts_data);
+}
+
+
 /****************Post customizado Soluções****************** */
 
 function create_solucoes_post_type() {
@@ -138,18 +302,57 @@ function get_all_solucoes_posts($data) {
 
 // Registrar o tipo de conteúdo "Colaboradores"
 function create_colaboradores_post_type() {
-    register_post_type('colaboradores',
-        array(
-            'labels' => array(
-                'name' => __('Colaboradores'),
-                'singular_name' => __('Colaborador')
-            ),
-            'public' => true,
-            'has_archive' => true,
-            'supports' => array('title', 'editor', 'thumbnail'), // Título, descrição e imagem
-            'rewrite' => array('slug' => 'colaboradores'),
-        )
+
+    $labels = array(
+        'name'                  => _x('Colaboradores', 'Post Type General Name', 'textdomain'),
+        'singular_name'         => _x('Colaborador', 'Post Type Singular Name', 'textdomain'),
+        'menu_name'             => __('Colaboradores', 'textdomain'),
+        'name_admin_bar'        => __('Colaborador', 'textdomain'),
+        'archives'              => __('Arquivos de Colaboradores', 'textdomain'),
+        'attributes'            => __('Atributos de Colaboradores', 'textdomain'),
+        'parent_item_colon'     => __('Colaborador Pai:', 'textdomain'),
+        'all_items'             => __('Todas Colaboradores', 'textdomain'),
+        'add_new_item'          => __('Adicionar Novo Colaborador', 'textdomain'),
+        'add_new'               => __('Adicionar Novo', 'textdomain'),
+        'new_item'              => __('Novo Colaborador', 'textdomain'),
+        'edit_item'             => __('Editar Colaborador', 'textdomain'),
+        'update_item'           => __('Atualizar Colaborador', 'textdomain'),
+        'view_item'             => __('Ver Colaborador', 'textdomain'),
+        'view_items'            => __('Ver Colaboradores', 'textdomain'),
+        'search_items'          => __('Buscar Colaborador', 'textdomain'),
+        'not_found'             => __('Não encontrado', 'textdomain'),
+        'not_found_in_trash'    => __('Não encontrado no Lixo', 'textdomain'),
+        'featured_image'        => __('Imagem Destaque', 'textdomain'),
+        'set_featured_image'    => __('Definir imagem destaque', 'textdomain'),
+        'remove_featured_image' => __('Remover imagem destaque', 'textdomain'),
+        'use_featured_image'    => __('Usar como imagem destaque', 'textdomain'),
+        'insert_into_item'      => __('Inserir na Colaborador', 'textdomain'),
+        'uploaded_to_this_item' => __('Enviado para esta Colaborador', 'textdomain'),
+        'items_list'            => __('Lista de Colaboradores', 'textdomain'),
+        'items_list_navigation' => __('Navegação da lista de Colaboradores', 'textdomain'),
+        'filter_items_list'     => __('Filtrar lista de Colaboradores', 'textdomain'),
     );
+
+    $args = array(
+        'label'                 => __('Colaborador', 'textdomain'),
+        'description'           => __('Tipo de post para Colaboradores', 'textdomain'),
+        'labels'                => $labels,
+        'supports'              => array('title', 'editor', 'thumbnail'),
+        'hierarchical'          => false,
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => true,
+        'menu_position'         => 5,
+        'show_in_admin_bar'     => true,
+        'show_in_nav_menus'     => true,
+        'can_export'            => true,
+        'has_archive'           => true,
+        'exclude_from_search'   => false,
+        'publicly_queryable'    => true,
+        'capability_type'       => 'post',
+    );
+    
+    register_post_type('colaboradores',$args);
 }
 add_action('init', 'create_colaboradores_post_type');
 
