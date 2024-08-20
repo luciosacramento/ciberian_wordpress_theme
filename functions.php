@@ -523,6 +523,26 @@ function custom_settings_page_html() {
 /****************Registra as configurações e os campos****************** */
 /// Registra as configurações e adiciona os campos na página de Configurações Gerais
 
+function registrar_configuracoes_personalizadas(){
+    register_rest_route('custom/v1', '/configuracoes-personalizadas/', array(
+        'methods' => 'GET',
+        'callback' => 'obter_configuracoes_personalizadas',
+    ));
+}
+
+add_action('rest_api_init', 'registrar_configuracoes_personalizadas');
+
+function obter_configuracoes_personalizadas() {
+    $configuracoes = array(
+        'marca' => get_option('custom_brand'),
+        'endereco' => get_option('custom_address'),
+        'telefone' => get_option('custom_phone'),
+        'email' => get_option('custom_email'),
+    );
+
+    return rest_ensure_response($configuracoes);
+}
+
 
 // Função de callback para o campo de upload de imagem de Marca
 // Registra as configurações e adiciona os campos na página de Configurações Gerais
@@ -631,3 +651,134 @@ function custom_email_field_cb() {
     echo '<input type="email" name="custom_email" value="' . esc_attr($email) . '" />';
 }
 
+
+
+/****************Envio de e-mail****************** */
+
+function register_envio_email() {
+   
+    register_rest_route( 'custom/v1', '/enviar-email/', array(
+        'methods' => 'POST',
+        'callback' => 'enviar_email',
+        'args' => array(
+            'remetente' => array(
+                'required' => true,
+                'validate_callback' => function($param, $request, $key) {
+                    return is_email($param);
+                }
+            ),
+            'telefone' => array(
+                'required' => false,
+            ),
+            'assunto' => array(
+                'required' => false,
+            ),
+            'nome' => array(
+                'required' => false,
+            ),
+            'mensagem' => array(
+                'required' => true,
+            ),
+        ),
+    ) );
+
+}
+
+add_action('rest_api_init', 'register_envio_email');
+
+function enviar_email( $data ) {
+    $from = $data['remetente'];
+    $telefone = $data['telefone'];
+    $nome = $data['nome'];
+    $assunto = $data['assunto'];
+    $to = get_option('email_field');
+    $message = $data['mensagem'].'<br><br>De: '.$nome.'<br><br>Telefone: '.$telefone;
+
+    $headers = "From: $nome <$from>". "\r\n" .
+               "Reply-To: $from" . "\r\n" .
+               "X-Mailer: PHP/" . phpversion();
+
+    $title = $assunto ? 'Mensagem enviada do site: '.$assunto : 'Mensagem enviada do site por '.$nome;           
+    $result = wp_mail( $to, $title, $message, $headers );
+
+    if ( $result ) {
+        return rest_ensure_response( array( 'message' => 'E-mail enviado com sucesso!','status' => 'ok' ) );
+    } else {
+        return rest_ensure_response( array( 'message' => 'Falha ao enviar o e-mail.','status' => 'error' ) );
+    }
+}
+
+
+/****************Pegar pagina****************** */
+
+function register_pagina() {
+    register_rest_route('custom/v1', '/pagina/', array(
+        'methods' => 'GET',
+        'callback' => 'obter_pagina_por_id',
+        'args' => array(
+            'id' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_string($param);
+                }
+            ),
+        ),
+    ));
+}
+
+add_action('rest_api_init', 'register_pagina');
+
+function obter_pagina_por_id($data) {
+    $pagina_id = $data['id'];
+    $pagina = get_post($pagina_id);
+
+    if ($pagina) {
+        $resposta = array(
+            'id' => $pagina->ID,
+            'titulo' => $pagina->post_title,
+            'conteudo' => apply_filters('the_content', $pagina->post_content),
+            // Adicione outros campos personalizados conforme necessário
+        );
+        return rest_ensure_response($resposta);
+    } else {
+        return new WP_Error('nao_encontrado', 'Página não encontrada', array('status' => 404));
+    }
+}
+
+/****************Pegar paginas****************** */
+
+function register_paginas() {
+    register_rest_route('custom/v1', '/paginas/', array(
+        'methods' => 'GET',
+        'callback' => 'obter_paginas',
+        'args' => array(
+            'id' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_string($param);
+                }
+            ),
+        ),
+    ));
+}
+
+add_action('rest_api_init', 'register_paginas');
+
+function obter_paginas() {
+
+    $paginas = get_pages();
+    $resposta = array();
+
+    if ($paginas) {
+        foreach($paginas as $pagina){
+            $resposta[] = array(
+                'id' => $pagina->ID,
+                'titulo' => $pagina->post_title,
+                'conteudo' => apply_filters('the_content', $pagina->post_content),
+                // Adicione outros campos personalizados conforme necessário
+            );
+        }
+
+        return rest_ensure_response($resposta);
+    } else {
+        return new WP_Error('nao_encontrado', 'Não exitem páginas.', array('status' => 404));
+    }
+}
