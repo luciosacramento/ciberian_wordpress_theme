@@ -768,6 +768,7 @@ function obter_pagina_por_id($data) {
             'id' => $pagina->ID,
             'slug' => $pagina->post_name,
             'titulo' => $pagina->post_title,
+            'resumo' => $pagina->post_excerpt,
             'conteudo' => apply_filters('the_content', $pagina->post_content),
             'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true)
             // Adicione outros campos personalizados conforme necessário
@@ -805,6 +806,7 @@ function get_custom_page_by_slug($data) {
             'id' => $pagina->ID,
             'slug' => $pagina->post_name,
             'titulo' => $pagina->post_title,
+            'resumo' => $pagina->post_excerpt,
             'conteudo' => apply_filters('the_content', $pagina->post_content),
             'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true)
             // Adicione outros campos personalizados conforme necessário
@@ -856,6 +858,7 @@ function obter_paginas() {
                 'id' => get_the_ID(),
                 'slug' => get_post_field('post_name', get_the_ID()),  
                 'titulo' => get_the_title(),
+                'resumo' => the_excerpt(),
                 'conteudo' => apply_filters('the_content', get_the_content()),
                 'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true), 
             );
