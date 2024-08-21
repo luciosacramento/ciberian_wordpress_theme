@@ -132,7 +132,7 @@ function documento_upload_callback($post) {
 }
 
 function save_documento_meta($post_id) {
-    echo($post_id);
+
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
     if (!isset($_POST['documento_nonce']) || !wp_verify_nonce($_POST['documento_nonce'], basename(__FILE__))) return;
     if (isset($_POST['documento_upload'])) {
