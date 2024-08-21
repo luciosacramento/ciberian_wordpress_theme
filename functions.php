@@ -734,6 +734,7 @@ function obter_pagina_por_id($data) {
     if ($pagina) {
         $resposta = array(
             'id' => $pagina->ID,
+            'slug' => $pagina->post_name,
             'titulo' => $pagina->post_title,
             'conteudo' => apply_filters('the_content', $pagina->post_content),
             // Adicione outros campos personalizados conforme necessário
@@ -771,9 +772,9 @@ function obter_paginas() {
         foreach($paginas as $pagina){
             $resposta[] = array(
                 'id' => $pagina->ID,
+                'slug' => $pagina->post_name,
                 'titulo' => $pagina->post_title,
-                'conteudo' => apply_filters('the_content', $pagina->post_content),
-                // Adicione outros campos personalizados conforme necessário
+                'conteudo' => apply_filters('the_content', $pagina->post_content)
             );
         }
 
