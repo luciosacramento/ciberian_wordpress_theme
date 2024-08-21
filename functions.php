@@ -711,8 +711,40 @@ function enviar_email( $data ) {
 
 /****************Pegar pagina****************** */
 
+function add_pagina_interna_meta_box() {
+    add_meta_box(
+        'pagina_interna_meta_box',       // ID do Meta Box
+        'Página Interna',                // Título do Meta Box
+        'render_pagina_interna_meta_box', // Função de callback para renderizar o conteúdo
+        'page',                          // Tipo de conteúdo (post type)
+        'side',                          // Localização do Meta Box (side, normal, advanced)
+        'default'                        // Prioridade de carregamento
+    );
+}
+add_action('add_meta_boxes', 'add_pagina_interna_meta_box');
+
+function render_pagina_interna_meta_box($post) {
+    // Recuperar valor salvo (se houver)
+    $pagina_interna_value = get_post_meta($post->ID, '_pagina_interna', true);
+
+    // Criar o campo checkbox
+    echo '<input type="checkbox" id="pagina_interna" name="pagina_interna" value="1" '. checked(1, $pagina_interna_value, false) .'/>';
+    echo '<label for="pagina_interna"> Página Interna</label>';
+}
+
+function save_pagina_interna_meta_box($post_id) {
+    // Verificar se o campo foi definido
+    if (isset($_POST['pagina_interna'])) {
+        update_post_meta($post_id, '_pagina_interna', 1); // Salvar valor 1 (marcado)
+    } else {
+        update_post_meta($post_id, '_pagina_interna', 0); // Salvar valor 0 (não marcado)
+    }
+}
+add_action('save_post', 'save_pagina_interna_meta_box');
+
+
 function register_pagina() {
-    register_rest_route('custom/v1', '/pagina/', array(
+    register_rest_route('custom/v1', '/pagina/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'obter_pagina_por_id',
         'args' => array(
@@ -737,11 +769,51 @@ function obter_pagina_por_id($data) {
             'slug' => $pagina->post_name,
             'titulo' => $pagina->post_title,
             'conteudo' => apply_filters('the_content', $pagina->post_content),
+            'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true)
             // Adicione outros campos personalizados conforme necessário
         );
         return rest_ensure_response($resposta);
     } else {
-        return new WP_Error('nao_encontrado', 'Página não encontrada', array('status' => 404));
+        return new WP_Error('nao_encontrado', 'Página não encontrada ou não publicada', array('status' => 404));
+    }
+}
+
+// Função para registrar a rota da API REST para pegar uma página pelo slug
+function register_custom_page_by_slug_rest_route() {
+    register_rest_route('custom/v1', '/pagina/slug/(?P<slug>[a-zA-Z0-9-]+)', array(
+        'methods'  => 'GET',
+        'callback' => 'get_custom_page_by_slug',
+        'args' => array(
+            'slug' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_string($param);
+                }
+            ),
+        ),
+    ));
+}
+add_action('rest_api_init', 'register_custom_page_by_slug_rest_route');
+
+// Função de callback para retornar a página com base no slug
+function get_custom_page_by_slug($data) {
+    $slug = $data['slug'];
+    $pagina = get_page_by_path($slug, OBJECT, 'page');
+
+    if ($pagina) {
+
+        $resposta = array(
+            'id' => $pagina->ID,
+            'slug' => $pagina->post_name,
+            'titulo' => $pagina->post_title,
+            'conteudo' => apply_filters('the_content', $pagina->post_content),
+            'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true)
+            // Adicione outros campos personalizados conforme necessário
+        );
+        return rest_ensure_response($resposta);
+
+    } else {
+        // Retorna um erro caso a página não seja encontrada ou não esteja publicada
+        return new WP_Error('no_page', 'Página não encontrada ou não publicada', array('status' => 404));
     }
 }
 
@@ -765,18 +837,30 @@ add_action('rest_api_init', 'register_paginas');
 
 function obter_paginas() {
 
-    $paginas = get_pages();
+    // Argumentos para a consulta WP_Query
+    $args = array(
+        'post_type'      => 'page',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,  // Retorna todos os posts
+    );
+
+    // Consulta WP_Query
+    $query = new WP_Query($args);
+
     $resposta = array();
 
-    if ($paginas) {
-        foreach($paginas as $pagina){
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
             $resposta[] = array(
-                'id' => $pagina->ID,
-                'slug' => $pagina->post_name,
-                'titulo' => $pagina->post_title,
-                'conteudo' => apply_filters('the_content', $pagina->post_content)
+                'id' => get_the_ID(),
+                'slug' => get_post_field('post_name', get_the_ID()),  
+                'titulo' => get_the_title(),
+                'conteudo' => apply_filters('the_content', get_the_content()),
+                'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true), 
             );
         }
+        wp_reset_postdata();
 
         return rest_ensure_response($resposta);
     } else {
