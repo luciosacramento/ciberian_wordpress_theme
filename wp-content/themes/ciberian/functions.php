@@ -858,7 +858,7 @@ function obter_paginas() {
                 'id' => get_the_ID(),
                 'slug' => get_post_field('post_name', get_the_ID()),  
                 'titulo' => get_the_title(),
-                'resumo' => the_excerpt(),
+                'resumo' => get_the_excerpt(),
                 'conteudo' => apply_filters('the_content', get_the_content()),
                 'pagina_interna' => (bool) get_post_meta(get_the_ID(), '_pagina_interna', true), 
             );
