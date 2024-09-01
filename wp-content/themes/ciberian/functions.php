@@ -538,6 +538,7 @@ function obter_configuracoes_personalizadas() {
         'endereco' => get_option('custom_address'),
         'telefone' => get_option('custom_phone'),
         'email' => get_option('custom_email'),
+        'email_denuncia' => get_option('custom_email_denuncia'),
     );
 
     return rest_ensure_response($configuracoes);
@@ -582,6 +583,16 @@ function custom_general_settings_register_fields() {
         'general'                                 // Página do menu
     );
     register_setting('general', 'custom_email');  // Registra a configuração para o campo
+
+    // Adiciona o campo de E-mail da Denúncia
+    add_settings_field(
+        'custom_email_denuncia',                           // ID do campo
+        'E-mail da Denúncia',                                 // Título do campo
+        'custom_email_field_cb_denuncia',                  // Função de callback para renderizar o campo
+        'general'                                 // Página do menu
+    );
+    register_setting('general', 'custom_email_denuncia');  // Registra a configuração para o campo
+
 }
 add_action('admin_init', 'custom_general_settings_register_fields');
 
@@ -652,6 +663,13 @@ function custom_email_field_cb() {
 }
 
 
+// Função de callback para o campo de E-mail Denúncia
+function custom_email_field_cb_denuncia() {
+    $email = get_option('custom_email_denuncia');
+    echo '<input type="email" name="custom_email_denuncia" value="' . esc_attr($email) . '" />';
+}
+
+
 
 /****************Envio de e-mail****************** */
 
@@ -691,7 +709,7 @@ function enviar_email( $data ) {
     $telefone = $data['telefone'];
     $nome = $data['nome'];
     $assunto = $data['assunto'];
-    $to = get_option('email_field');
+    $to = get_option('custom_email');
     $message = $data['mensagem'].'<br><br>De: '.$nome.'<br><br>Telefone: '.$telefone;
 
     $headers = "From: $nome <$from>". "\r\n" .
@@ -706,6 +724,74 @@ function enviar_email( $data ) {
         $response->set_status( 200 );
     } else {
         $response =  rest_ensure_response( array( 'message' => 'Falha ao enviar o e-mail.','status' => '500' ) );
+        $response->set_status( 500 );
+    }
+
+    return $response;
+}
+
+
+/****************Envio de Denúncia****************** */
+
+function register_envio_denuncia() {
+   
+    register_rest_route( 'custom/v1', '/enviar-denuncia/', array(
+        'methods' => 'POST',
+        'callback' => 'enviar_denuncia',
+        'args' => array(
+            'email' => array(
+                'required' => true,
+                'validate_callback' => function($param, $request, $key) {
+                    return is_email($param);
+                }
+            ),
+            'sobrenome' => array(
+                'required' => false,
+            ),
+            'nome' => array(
+                'required' => false,
+            ),
+            'comentario' => array(
+                'required' => true,
+            ),
+        ),
+    ) );
+
+}
+
+add_action('rest_api_init', 'register_envio_denuncia');
+
+function enviar_denuncia( $data ) {
+    $from = $data['email'];
+
+    $to = get_option('custom_email_denuncia');
+
+    if(!$from || $from == '') {
+        $from = $to;
+    }
+
+    $nome = $data['nome'];
+
+    if(!$nome || $nome == '') {
+        $nome = 'Anônimo';
+    }
+
+    $sobrenome = $data['sobrenome'];
+    $to = get_option('email_field_denuncia');
+    $message = $data['comentario'].'<br><br>De: '.$nome.' '.$sobrenome;
+
+    $headers = "From: $nome <$from>". "\r\n" .
+               "Reply-To: $from" . "\r\n" .
+               "X-Mailer: PHP/" . phpversion();
+
+    $title = $assunto ? 'Denúncia enviada do site: '.$assunto : 'Denúncia enviada do site por '.$nome.' '.$sobrenome;          
+    $result = wp_mail( $to, $title, $message, $headers );
+
+    if ( $result ) {
+        $response =  rest_ensure_response( array( 'message' => 'Denúncia enviada com sucesso!','status' => 'ok' ) );
+        $response->set_status( 200 );
+    } else {
+        $response =  rest_ensure_response( array( 'message' => 'Falha ao enviar a Denúncia.','status' => '500' ) );
         $response->set_status( 500 );
     }
 
