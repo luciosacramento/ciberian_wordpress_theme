@@ -534,7 +534,7 @@ add_action('rest_api_init', 'registrar_configuracoes_personalizadas');
 
 function obter_configuracoes_personalizadas() {
     $configuracoes = array(
-        'marca' => get_option('custom_brand'),
+        'marca' => wp_get_attachment_url(get_option('custom_brand')),
         'endereco' => get_option('custom_address'),
         'telefone' => get_option('custom_phone'),
         'email' => get_option('custom_email'),
@@ -702,10 +702,14 @@ function enviar_email( $data ) {
     $result = wp_mail( $to, $title, $message, $headers );
 
     if ( $result ) {
-        return rest_ensure_response( array( 'message' => 'E-mail enviado com sucesso!','status' => 'ok' ) );
+        $response =  rest_ensure_response( array( 'message' => 'E-mail enviado com sucesso!','status' => 'ok' ) );
+        $response->set_status( 200 );
     } else {
-        return rest_ensure_response( array( 'message' => 'Falha ao enviar o e-mail.','status' => 'error' ) );
+        $response =  rest_ensure_response( array( 'message' => 'Falha ao enviar o e-mail.','status' => '500' ) );
+        $response->set_status( 500 );
     }
+
+    return $response;
 }
 
 
