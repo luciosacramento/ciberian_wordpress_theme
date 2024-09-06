@@ -1,5 +1,35 @@
 <?php
 
+function add_cors_http_header() {
+    // Permitir requisições de uma origem específica
+    header("Access-Control-Allow-Origin: https://ciberian-site.vercel.app"); // Substitua pelo seu domínio de desenvolvimento
+
+    // Se você quiser permitir múltiplas origens, você pode usar um array para verificar a origem.
+    /*
+    $allowed_origins = ['http://localhost:3000', 'https://staging.example.com'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    }
+    */
+
+    // Permitir métodos HTTP específicos
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+
+    // Permitir cabeçalhos personalizados
+    header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+    // Permitir credenciais se necessário (cookies, autenticação HTTP)
+    header("Access-Control-Allow-Credentials: true");
+
+    // Retornar sucesso em respostas OPTIONS para evitar erros de CORS
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit(0); // Finaliza o script para evitar outras saídas
+    }
+}
+
+// Adicionar o CORS nas requisições REST API
+add_action('rest_api_init', 'add_cors_http_header');
+
 header("Content-Type: application/json");
 
 
