@@ -563,68 +563,72 @@ function registrar_configuracoes_personalizadas(){
 add_action('rest_api_init', 'registrar_configuracoes_personalizadas');
 
 function obter_configuracoes_personalizadas() {
-    $configuracoes = array(
-        'marca' => wp_get_attachment_url(get_option('custom_brand')),
-        'endereco' => get_option('custom_address'),
-        'telefone' => get_option('custom_phone'),
-        'email' => get_option('custom_email'),
-        'email_denuncia' => get_option('custom_email_denuncia'),
-    );
+    $configuracoes = get_option('custom_contacts', []); // Obtém todos os contatos salvos
 
     return rest_ensure_response($configuracoes);
 }
 
 
-// Função de callback para o campo de upload de imagem de Marca
-// Registra as configurações e adiciona os campos na página de Configurações Gerais
+// Função de callback para o campo de Endereço, Telefone e E-mail
 function custom_general_settings_register_fields() {
-    // Adiciona o campo de upload de imagem para Marca
+    // Adiciona o campo de Endereço, Telefone e E-mail com um botão para adicionar mais
     add_settings_field(
-        'custom_brand',                           // ID do campo
-        'Marca (Imagem)',                         // Título do campo
-        'custom_brand_field_cb',                  // Função de callback para renderizar o campo
-        'general'                                 // Página do menu ("general" é para Configurações Gerais)
+        'custom_contacts',                           // ID do campo
+        'Título, Endereço, Telefone e E-mail',               // Título do campo
+        'custom_contacts_field_cb',                  // Função de callback para renderizar o campo
+        'general'                                    // Página do menu
     );
-    register_setting('general', 'custom_brand'); // Registra a configuração para o campo
-
-    // Adiciona o campo de Endereço com editor de texto
-    add_settings_field(
-        'custom_address',                         // ID do campo
-        'Endereço',                               // Título do campo
-        'custom_address_field_cb',                // Função de callback para renderizar o campo
-        'general'                                 // Página do menu
-    );
-    register_setting('general', 'custom_address'); // Registra a configuração para o campo
-
-    // Adiciona o campo de Telefone
-    add_settings_field(
-        'custom_phone',                           // ID do campo
-        'Telefone',                               // Título do campo
-        'custom_phone_field_cb',                  // Função de callback para renderizar o campo
-        'general'                                 // Página do menu
-    );
-    register_setting('general', 'custom_phone');  // Registra a configuração para o campo
-
-    // Adiciona o campo de E-mail
-    add_settings_field(
-        'custom_email',                           // ID do campo
-        'E-mail',                                 // Título do campo
-        'custom_email_field_cb',                  // Função de callback para renderizar o campo
-        'general'                                 // Página do menu
-    );
-    register_setting('general', 'custom_email');  // Registra a configuração para o campo
-
-    // Adiciona o campo de E-mail da Denúncia
-    add_settings_field(
-        'custom_email_denuncia',                           // ID do campo
-        'E-mail da Denúncia',                                 // Título do campo
-        'custom_email_field_cb_denuncia',                  // Função de callback para renderizar o campo
-        'general'                                 // Página do menu
-    );
-    register_setting('general', 'custom_email_denuncia');  // Registra a configuração para o campo
-
+    register_setting('general', 'custom_contacts'); // Registra a configuração para os campos
 }
+
 add_action('admin_init', 'custom_general_settings_register_fields');
+
+// Função de callback para exibir campos personalizados
+function custom_contacts_field_cb() {
+    // Obtém os dados salvos
+    $contacts = get_option('custom_contacts', []);
+
+    // Exibe os campos de Endereço, Telefone e E-mail, permitindo adicionar novos
+    foreach ($contacts as $index => $contact) {
+        ?>
+        <div class="contact-set">
+            <input type="text" name="custom_contacts[<?php echo $index; ?>][titulo]" placeholder="Endereço" value="<?php echo esc_attr($contact['titulo']); ?>" />
+            <input type="text" name="custom_contacts[<?php echo $index; ?>][address]" placeholder="Endereço" value="<?php echo esc_attr($contact['address']); ?>" />
+            <input type="text" name="custom_contacts[<?php echo $index; ?>][phone]" placeholder="Telefone" value="<?php echo esc_attr($contact['phone']); ?>" />
+            <input type="email" name="custom_contacts[<?php echo $index; ?>][email]" placeholder="E-mail" value="<?php echo esc_attr($contact['email']); ?>" />
+            <button type="button" class="remove-contact">Remover</button>
+        </div>
+        <?php
+    }
+    
+    // Botão para adicionar novo conjunto
+    ?>
+    <button type="button" id="add-contact">Adicionar Novo Contato</button>
+    <script>
+        jQuery(document).ready(function($) {
+            // Função para adicionar um novo conjunto de campos
+            $('#add-contact').click(function() {
+                var index = $('.contact-set').length;
+                var newSet = `
+                    <div class="contact-set">
+                         <input type="text" name="custom_contacts[${index}][titulo]" placeholder="Título" />
+                        <input type="text" name="custom_contacts[${index}][address]" placeholder="Endereço" />
+                        <input type="text" name="custom_contacts[${index}][phone]" placeholder="Telefone" />
+                        <input type="email" name="custom_contacts[${index}][email]" placeholder="E-mail" />
+                        <button type="button" class="remove-contact">Remover</button>
+                    </div>
+                `;
+                $(this).before(newSet);
+            });
+
+            // Função para remover um conjunto de campos
+            $(document).on('click', '.remove-contact', function() {
+                $(this).closest('.contact-set').remove();
+            });
+        });
+    </script>
+    <?php
+}
 
 // Função de callback para o campo de upload de imagem de Marca
 function custom_brand_field_cb() {
@@ -675,6 +679,12 @@ function custom_brand_field_cb() {
 }
 
 // Função de callback para o campo de Endereço com editor de texto
+function custom_titulo_field_cb() {
+    $titulo = get_option('custom_titulo');
+    wp_editor($titulo, 'custom_titulo', array('textarea_name' => 'custom_titulo'));
+}
+
+// Função de callback para o campo de Endereço com editor de texto
 function custom_address_field_cb() {
     $address = get_option('custom_address');
     wp_editor($address, 'custom_address', array('textarea_name' => 'custom_address'));
@@ -691,7 +701,6 @@ function custom_email_field_cb() {
     $email = get_option('custom_email');
     echo '<input type="email" name="custom_email" value="' . esc_attr($email) . '" />';
 }
-
 
 // Função de callback para o campo de E-mail Denúncia
 function custom_email_field_cb_denuncia() {
