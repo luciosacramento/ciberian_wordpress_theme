@@ -549,6 +549,109 @@ function custom_settings_page_html() {
     echo '</div>';
 }
 
+/****************Post customizado Parceiros****************** */
+
+function custom_post_type_parceiro() {
+    $labels = array(
+        'name'                  => _x('Parceiros', 'Post Type General Name', 'textdomain'),
+        'singular_name'         => _x('Parceiro', 'Post Type Singular Name', 'textdomain'),
+        'menu_name'             => __('Parceiros', 'textdomain'),
+        'name_admin_bar'        => __('Parceiro', 'textdomain'),
+        'archives'              => __('Arquivos de Parceiros', 'textdomain'),
+        'attributes'            => __('Atributos de Parceiro', 'textdomain'),
+        'parent_item_colon'     => __('Parceiro Pai:', 'textdomain'),
+        'all_items'             => __('Todos os Parceiros', 'textdomain'),
+        'add_new_item'          => __('Adicionar Novo Parceiro', 'textdomain'),
+        'add_new'               => __('Adicionar Novo', 'textdomain'),
+        'new_item'              => __('Novo Parceiro', 'textdomain'),
+        'edit_item'             => __('Editar Parceiro', 'textdomain'),
+        'update_item'           => __('Atualizar Parceiro', 'textdomain'),
+        'view_item'             => __('Ver Parceiro', 'textdomain'),
+        'view_items'            => __('Ver Parceiros', 'textdomain'),
+        'search_items'          => __('Procurar Parceiro', 'textdomain'),
+        'not_found'             => __('Não encontrado', 'textdomain'),
+        'not_found_in_trash'    => __('Não encontrado na lixeira', 'textdomain'),
+        'featured_image'        => __('Imagem Destaque', 'textdomain'),
+        'set_featured_image'    => __('Definir imagem destaque', 'textdomain'),
+        'remove_featured_image' => __('Remover imagem destaque', 'textdomain'),
+        'use_featured_image'    => __('Usar como imagem destaque', 'textdomain'),
+        'insert_into_item'      => __('Inserir no Parceiro', 'textdomain'),
+        'uploaded_to_this_item' => __('Enviado para este Parceiro', 'textdomain'),
+        'items_list'            => __('Lista de Parceiros', 'textdomain'),
+        'items_list_navigation' => __('Navegação da lista de Parceiros', 'textdomain'),
+        'filter_items_list'     => __('Filtrar lista de Parceiros', 'textdomain'),
+    );
+    $args = array(
+        'label'                 => __('Parceiro', 'textdomain'),
+        'description'           => __('Tipo de conteúdo para Parceiros', 'textdomain'),
+        'labels'                => $labels,
+        'supports'              => array('title', 'thumbnail'), // Define os campos suportados (título e imagem destaque)
+        'hierarchical'          => false,
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => true,
+        'menu_position'         => 5,
+        'show_in_admin_bar'     => true,
+        'show_in_nav_menus'     => true,
+        'can_export'            => true,
+        'has_archive'           => true,
+        'exclude_from_search'   => false,
+        'publicly_queryable'    => true,
+        'capability_type'       => 'post',
+        'show_in_rest'          => true, // Expor no editor de blocos (Gutenberg) e na API REST
+        'menu_icon'             => 'dashicons-groups', // Ícone para o menu no admin
+    );
+    register_post_type('parceiro', $args);
+}
+add_action('init', 'custom_post_type_parceiro', 0);
+
+/****Rest API***
+http://localhost/cenoura/wp-json/custom/v1/parceiros
+*/
+
+// Função para registrar a rota da API REST
+function register_parceiros_rest_route() {
+    register_rest_route('custom/v1', '/parceiros/', array(
+        'methods'  => 'GET',
+        'callback' => 'get_all_parceiros_posts',
+    ));
+}
+add_action('rest_api_init', 'register_parceiros_rest_route');
+
+// Função de callback para retornar os posts do tipo Parceiro
+function get_all_parceiros_posts($data) {
+    // Argumentos para a consulta WP_Query
+    $args = array(
+        'post_type'      => 'parceiro', // Tipo de conteúdo registrado anteriormente
+        'post_status'    => 'publish',  // Apenas posts publicados
+        'posts_per_page' => -1,         // Retorna todos os posts
+    );
+
+    // Consulta WP_Query
+    $query = new WP_Query($args);
+
+    // Array para armazenar os resultados
+    $posts_data = array();
+
+    // Percorre os posts retornados pela consulta
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+
+            // Adiciona cada post ao array
+            $posts_data[] = array(
+                'ID'           => get_the_ID(),
+                'title'        => get_the_title(),
+                'image_url'    => get_the_post_thumbnail_url(get_the_ID(), 'full'), // URL da Imagem Destaque
+            );
+        }
+        wp_reset_postdata();
+    }
+
+    // Retorna os posts como JSON
+    return rest_ensure_response($posts_data);
+}
+
 // 
 /****************Registra as configurações e os campos****************** */
 /// Registra as configurações e adiciona os campos na página de Configurações Gerais
