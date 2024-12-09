@@ -39,20 +39,20 @@ define('WP_USE_THEMES', false);
 
 // Captura os dados do formulário
 $nome     = sanitize_text_field($_POST["nome"]);
-$telefone = sanitize_text_field($_POST["telefone"]);
+$sobrenome = sanitize_text_field($_POST["sobrenome"]);
 $from     = "autentica.smtp@ciberian.com.br";
-$assunto  = sanitize_text_field($_POST["assunto"]);
-$message  = nl2br(sanitize_textarea_field($_POST["mensagem"])) . '<br><br>De: ' . $nome . '<br>Telefone: ' . $telefone;
+$assunto  = "Denúncia";
+$message  = $_POST["comentario"] . '<br><br>De: ' . $nome . ' ' . $sobrenome;
 
 // Configurar cabeçalhos do e-mail
 $headers = array(
     "From: $nome <$from>",
-    "Reply-To: $nome <" . sanitize_email($_POST["remetente"]) . ">",
+    "Reply-To: $nome $sobrenome <" . sanitize_email($_POST["email"]) . ">",
     "Content-Type: text/html; charset=UTF-8" // Define o conteúdo como HTML
 );
 
 // E-mail de destino (configurado no WordPress)
-$to = get_option('custom_email');
+$to = get_option('custom_email_denuncia');
 
 // Título do e-mail
 $title = $assunto ? 'Mensagem enviada do site: ' . $assunto : 'Mensagem enviada do site por ' . $nome;
@@ -61,14 +61,14 @@ $title = $assunto ? 'Mensagem enviada do site: ' . $assunto : 'Mensagem enviada 
 if (wp_mail($to, $title, $message, $headers)) {
     // Resposta de sucesso
     $response = array(
-        'message' => 'E-mail enviado com sucesso!',
+        'message' => 'Denúncia enviada com sucesso!',
         'status'  => 'ok',
     );
     http_response_code(200);
 } else {
     // Resposta de erro
     $response = array(
-        'message' => 'Falha ao enviar o e-mail.',
+        'message' => 'Falha ao enviar a Denúncia.',
         'status'  => '500',
         'to'      => $to,
         'title'   => $title,

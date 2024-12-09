@@ -1,34 +1,34 @@
 <?php
 
-function add_cors_http_header() {
-    // Permitir requisições de uma origem específica
-    header("Access-Control-Allow-Origin: https://ciberian-site.vercel.app"); // Substitua pelo seu domínio de desenvolvimento
+function custom_cors_headers() {
+     $http_origin = $_SERVER['HTTP_ORIGIN'];
 
-    // Se você quiser permitir múltiplas origens, você pode usar um array para verificar a origem.
-    /*
-    $allowed_origins = ['http://localhost:3000', 'https://staging.example.com'];
-    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-    }
-    */
+if ($http_origin == "https://www.ciberian.com.br" || $http_origin == "https://ciberian-site.vercel.app")
+{  
+    header("Access-Control-Allow-Origin: $http_origin");
+}
 
-    // Permitir métodos HTTP específicos
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-
-    // Permitir cabeçalhos personalizados
+    // Define os cabeçalhos para todas as requisições
+    header("Access-Control-Allow-Origin: $http_origin");
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
-
-    // Permitir credenciais se necessário (cookies, autenticação HTTP)
     header("Access-Control-Allow-Credentials: true");
 
-    // Retornar sucesso em respostas OPTIONS para evitar erros de CORS
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        exit(0); // Finaliza o script para evitar outras saídas
+    // Se for uma requisição OPTIONS (preflight), finalize com um status 200
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        // Certifique-se de configurar os mesmos cabeçalhos no preflight
+        header("Access-Control-Allow-Origin: $http_origin");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization");
+        header("Access-Control-Allow-Credentials: true");
+        exit(0); // Finaliza a requisição com sucesso
     }
 }
 
-// Adicionar o CORS nas requisições REST API
-add_action('rest_api_init', 'add_cors_http_header');
+// Adiciona os cabeçalhos CORS ao REST do WordPress
+add_action('rest_api_init', function () {
+    add_action('rest_pre_serve_request', 'custom_cors_headers', 15);
+});
 
 header("Content-Type: application/json");
 
@@ -59,6 +59,59 @@ function ocultar_tipo_de_post_do_menu() {
 
 add_action('admin_menu', 'ocultar_tipo_de_post_do_menu');
 
+/********************RECAPTCHA GOOGLE**********************/
+
+
+function register_verify_recaptcha() {
+   
+    register_rest_route( 'custom/v1', '/verify-recaptcha/', array(
+        'methods' => 'POST',
+        'callback' => 'validate_recaptcha'
+    ) );
+
+}
+
+add_action('rest_api_init', 'register_verify_recaptcha');
+
+//function enviar_denuncia( $data ) {
+//$from = $data['email'];
+
+
+function validate_recaptcha() {
+    $recaptcha_token = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : '';
+    
+    if (!$recaptcha_token) {
+        wp_send_json_error(['message' => 'Token do reCAPTCHA não enviado']);
+        return;
+    }
+
+    $secret_key = '6LdtvpIqAAAAABtaM2R61rC0uaRn6J2UGxEYGw0s';
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+
+    $response = wp_remote_post($url, [
+        'body' => [
+            'secret' => $secret_key,
+            'response' => $recaptcha_token,
+        ],
+    ]);
+
+    if (is_wp_error($response)) {
+        wp_send_json_error(['message' => 'Erro ao validar o reCAPTCHA']);
+        return;
+    }
+
+    $response_body = wp_remote_retrieve_body($response);
+    $result = json_decode($response_body, true);
+
+    if ($result['success'] === true && $result['score'] >= 0.5) {
+        wp_send_json_success(['message' => 'reCAPTCHA validado com sucesso']);
+    } else {
+        wp_send_json_error(['message' => 'Falha ao validar o reCAPTCHA']);
+    }
+}
+
+add_action('wp_ajax_validate_captcha', 'validate_recaptcha');
+add_action('wp_ajax_nopriv_validate_captcha', 'validate_recaptcha');
 /****************Post customizado Documentos****************** */
 
 function create_documentos_post_type() {
@@ -810,6 +863,28 @@ function custom_email_field_cb_denuncia() {
     $email = get_option('custom_email_denuncia');
     echo '<input type="email" name="custom_email_denuncia" value="' . esc_attr($email) . '" />';
 }
+
+function custom_general_settings_register_email_fields() {
+    // Campo para E-mail
+    add_settings_field(
+        'custom_email',                        // ID do campo
+        'E-mail',                              // Título do campo
+        'custom_email_field_cb',               // Função de callback para renderizar o campo
+        'general'                              // Página do menu
+    );
+    register_setting('general', 'custom_email'); // Registra a configuração para o campo
+
+    // Campo para E-mail de Denúncia
+    add_settings_field(
+        'custom_email_denuncia',               // ID do campo
+        'E-mail Denúncia',                     // Título do campo
+        'custom_email_field_cb_denuncia',      // Função de callback para renderizar o campo
+        'general'                              // Página do menu
+    );
+    register_setting('general', 'custom_email_denuncia'); // Registra a configuração para o campo
+}
+add_action('admin_init', 'custom_general_settings_register_email_fields');
+
 
 
 
