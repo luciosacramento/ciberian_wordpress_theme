@@ -23,19 +23,19 @@ if ($http_origin == "https://www.ciberian.com.br" || $http_origin == "https://ci
 
 // Carregar o WordPress
 define('WP_USE_THEMES', false);
-        $dir = dirname(__FILE__);
-        $dir = explode("wp-content", $dir);
-        $dir = $dir[0] . 'wp-blog-header.php';
+$dir = dirname(__FILE__);
+$dir = explode("wp-content", $dir);
+$dir = $dir[0] . 'wp-blog-header.php';
 
-        require($dir);
-        
-        $dir = dirname(__FILE__);
-        $dir = explode("wp-content", $dir);
-        $dir = $dir[0] . 'wp-load.php';
-        
-        require($dir);
-        
-        global $wp_query;
+require($dir);
+
+$dir = dirname(__FILE__);
+$dir = explode("wp-content", $dir);
+$dir = $dir[0] . 'wp-load.php';
+
+require($dir);
+
+global $wp_query;
 
 // Captura os dados do formulário
 $nome     = sanitize_text_field($_POST["nome"]);
