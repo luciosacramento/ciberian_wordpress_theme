@@ -86,8 +86,7 @@ $message  .= '<td style="background:#fff; padding:10px">';
 $message  .= $remetente;
 $message  .= '</td>';
 $message  .= '</tr>';
-        
-        
+                
 $message  .= '<tr>';
 $message  .= '<td style="background:#ebf2fa; padding:10px">';
 $message  .= '<b>Assunto<b/>';
