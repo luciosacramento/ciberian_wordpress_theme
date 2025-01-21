@@ -42,12 +42,80 @@ $nome     = sanitize_text_field($_POST["nome"]);
 $sobrenome = sanitize_text_field($_POST["sobrenome"]);
 $from     = "autentica.smtp@ciberian.com.br";
 $assunto  = "Denúncia";
+$remetente  = sanitize_email($_POST["email"]);
 $message  = $_POST["comentario"] . '<br><br>De: ' . $nome . ' ' . $sobrenome;
+
+$message = "";
+
+$message  .= '<table style="width:100%; max-width:800px; font-family:arial; border:1px solid #eee">';
+$message  .= '<tr>';
+$message  .= '<th style="background:#eee; padding:10px; text-align:left">';
+$message  .= '<b>Canal de Comunicação<b/>';
+$message  .= '</th>';
+$message  .= '</tr>';
+        
+$message  .= '<tr>';
+$message  .= '<td style="background:#ebf2fa; padding:10px">';
+$message  .= '<b>Canal<b/>';
+$message  .= '</td>';
+$message  .= '</tr>';
+$message  .= '<tr>';
+$message  .= '<td style="background:#fff; padding:10px">';
+$message  .= 'Denúncia';
+$message  .= '</td>';
+$message  .= '</tr>';
+        
+$message  .= '<tr>';
+$message  .= '<td style="background:#ebf2fa; padding:10px">';
+$message  .= '<b>Nome<b/>';
+$message  .= '</td>';
+$message  .= '</tr>';
+$message  .= '<tr>';
+$message  .= '<td style="background:#fff; padding:10px">';
+$message  .= $nome ." ".$sobrenome;
+$message  .= '</td>';
+$message  .= '</tr>';
+        
+$message  .= '<tr>';
+$message  .= '<td style="background:#ebf2fa; padding:10px">';
+$message  .= '<b>E-mail<b/>';
+$message  .= '</td>';
+$message  .= '</tr>';
+$message  .= '<tr>';
+$message  .= '<td style="background:#fff; padding:10px">';
+$message  .= $remetente;
+$message  .= '</td>';
+$message  .= '</tr>';
+        
+        
+$message  .= '<tr>';
+$message  .= '<td style="background:#ebf2fa; padding:10px">';
+$message  .= '<b>Assunto<b/>';
+$message  .= '</td>';
+$message  .= '</tr>';
+$message  .= '<tr>';
+$message  .= '<td style="background:#fff; padding:10px">';
+$message  .=  $assunto;
+$message  .= '</td>';
+$message  .= '</tr>';
+        
+$message  .= '<tr>';
+$message  .= '<td style="background:#ebf2fa; padding:10px">';
+$message  .= '<b>Mensagem<b/>';
+$message  .= '</td>';
+$message  .= '</tr>';
+$message  .= '<tr>';
+$message  .= '<td style="background:#fff; padding:10px">';
+$message  .= nl2br(sanitize_textarea_field($_POST["mensagem"]));
+$message  .= '</td>';
+$message  .= '</tr>';
+        
+$message  .= '</table>';
 
 // Configurar cabeçalhos do e-mail
 $headers = array(
     "From: $nome <$from>",
-    "Reply-To: $nome $sobrenome <" . sanitize_email($_POST["email"]) . ">",
+    "Reply-To: $nome $sobrenome <" . $remetente . ">",
     "Content-Type: text/html; charset=UTF-8" // Define o conteúdo como HTML
 );
 
