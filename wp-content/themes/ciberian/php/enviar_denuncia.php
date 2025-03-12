@@ -101,7 +101,7 @@ $message  .= '</td>';
 $message  .= '</tr>';
 $message  .= '<tr>';
 $message  .= '<td style="background:#fff; padding:10px">';
-$message  .= nl2br(sanitize_textarea_field($_POST["mensagem"]));
+$message  .= nl2br(sanitize_textarea_field($_POST["comentario"]));
 $message  .= '</td>';
 $message  .= '</tr>';
         
