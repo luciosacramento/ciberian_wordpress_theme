@@ -1,14 +1,10 @@
 <?php
-
-<<<<<<< HEAD
-function add_cors_http_header() {
+/**function add_cors_http_header() {
     // Permitir requisições de uma origem específica
     header("Access-Control-Allow-Origin: https://ciberian-site.vercel.app"); // Substitua pelo seu domínio de desenvolvimento
-    header("Access-Control-Allow-Origin: http://192.168.200.26");
-=======
+    header("Access-Control-Allow-Origin: http://192.168.200.26"); */
 function custom_cors_headers() {
      $http_origin = $_SERVER['HTTP_ORIGIN'];
->>>>>>> b5bafc604e7e8f03b272aa0032005a41d9b0a8bb
 
 if ($http_origin == "https://www.ciberian.com.br" || $http_origin == "https://ciberian-site.vercel.app")
 {  
