@@ -3,6 +3,7 @@
 function add_cors_http_header() {
     // Permitir requisições de uma origem específica
     header("Access-Control-Allow-Origin: https://ciberian-site.vercel.app"); // Substitua pelo seu domínio de desenvolvimento
+    header("Access-Control-Allow-Origin: http://192.168.200.26");
 
     // Se você quiser permitir múltiplas origens, você pode usar um array para verificar a origem.
     /*
@@ -811,6 +812,28 @@ function custom_email_field_cb_denuncia() {
     echo '<input type="email" name="custom_email_denuncia" value="' . esc_attr($email) . '" />';
 }
 
+function custom_general_settings_register_email_fields() {
+    // Campo para E-mail
+    add_settings_field(
+        'custom_email',                        // ID do campo
+        'E-mail',                              // Título do campo
+        'custom_email_field_cb',               // Função de callback para renderizar o campo
+        'general'                              // Página do menu
+    );
+    register_setting('general', 'custom_email'); // Registra a configuração para o campo
+
+    // Campo para E-mail de Denúncia
+    add_settings_field(
+        'custom_email_denuncia',               // ID do campo
+        'E-mail Denúncia',                     // Título do campo
+        'custom_email_field_cb_denuncia',      // Função de callback para renderizar o campo
+        'general'                              // Página do menu
+    );
+    register_setting('general', 'custom_email_denuncia'); // Registra a configuração para o campo
+}
+add_action('admin_init', 'custom_general_settings_register_email_fields');
+
+
 
 
 /****************Envio de e-mail****************** */
@@ -1100,5 +1123,55 @@ function obter_paginas() {
         return rest_ensure_response($resposta);
     } else {
         return new WP_Error('nao_encontrado', 'Não exitem páginas.', array('status' => 404));
+    }
+}
+
+/********************RECAPTCHA GOOGLE**********************/
+
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/verify-recaptcha', array(
+        'methods'  => 'POST',
+        'callback' => 'verify_recaptcha',
+        'permission_callback' => '__return_true', // Permite acesso público (opcional: adicione validação se necessário)
+    ));
+});
+
+function verify_recaptcha(WP_REST_Request $request) {
+    $secret_key = '6LccqJAqAAAAAFilJY-PHFS_gQqfDFWFqkN2yMdk'; // Substitua pela sua chave secreta do reCAPTCHA
+    $token = $request->get_param('token'); // Captura o token enviado pelo cliente
+
+    // Verifica se o token foi enviado
+    if (!$token) {
+        return new WP_REST_Response(['success' => false, 'message' => 'Token não fornecido'], 400);
+    }
+
+    // Endpoint do Google para validação
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+
+    // Dados para a requisição
+    $response = wp_remote_post($url, [
+        'body' => [
+            'secret'   => $secret_key,
+            'response' => $token,
+        ],
+    ]);
+
+    // Verifica se a requisição foi bem-sucedida
+    if (is_wp_error($response)) {
+        return new WP_REST_Response(['success' => false, 'message' => 'Erro ao conectar ao Google'], 500);
+    }
+
+    // Decodifica a resposta do Google
+    $result = json_decode(wp_remote_retrieve_body($response), true);
+
+    // Verifica se o reCAPTCHA foi validado
+    if ($result['success']) {
+        return new WP_REST_Response(['success' => true, 'message' => 'reCAPTCHA validado com sucesso'], 200);
+    } else {
+        return new WP_REST_Response([
+            'success'     => false,
+            'message'     => 'Falha na validação do reCAPTCHA',
+            'error_codes' => $result['error-codes'],
+        ], 400);
     }
 }
