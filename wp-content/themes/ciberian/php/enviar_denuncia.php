@@ -26,25 +26,21 @@ define('WP_USE_THEMES', false);
 $dir = dirname(__FILE__);
 $dir = explode("wp-content", $dir);
 $dir = $dir[0] . 'wp-blog-header.php';
-
 require($dir);
-
 $dir = dirname(__FILE__);
 $dir = explode("wp-content", $dir);
 $dir = $dir[0] . 'wp-load.php';
-
 require($dir);
-
 global $wp_query;
 
 // Captura os dados do formulário
 $nome     = sanitize_text_field($_POST["nome"]);
-$telefone = sanitize_text_field($_POST["telefone"]);
+$sobrenome = sanitize_text_field($_POST["sobrenome"]);
 $from     = "autentica.smtp@ciberian.com.br";
-$assunto  = sanitize_text_field($_POST["assunto"]);
-$remetente = sanitize_email($_POST["remetente"]);
+$assunto  = "Denúncia";
+$remetente  = sanitize_email($_POST["email"]);
+$message  = $_POST["comentario"] . '<br><br>De: ' . $nome . ' ' . $sobrenome;
 
-//$message  = nl2br(sanitize_textarea_field($_POST["mensagem"])) . '<br><br>De: ' . $nome . '<br>Telefone: ' . $telefone;
 $message = "";
 
 $message  .= '<table style="width:100%; max-width:800px; font-family:arial; border:1px solid #eee">';
@@ -61,7 +57,7 @@ $message  .= '</td>';
 $message  .= '</tr>';
 $message  .= '<tr>';
 $message  .= '<td style="background:#fff; padding:10px">';
-$message  .= 'Contato';
+$message  .= 'Denúncia';
 $message  .= '</td>';
 $message  .= '</tr>';
         
@@ -72,7 +68,7 @@ $message  .= '</td>';
 $message  .= '</tr>';
 $message  .= '<tr>';
 $message  .= '<td style="background:#fff; padding:10px">';
-$message  .= $nome;
+$message  .= $nome ." ".$sobrenome;
 $message  .= '</td>';
 $message  .= '</tr>';
         
@@ -86,18 +82,7 @@ $message  .= '<td style="background:#fff; padding:10px">';
 $message  .= $remetente;
 $message  .= '</td>';
 $message  .= '</tr>';
-        
-$message  .= '<tr>';
-$message  .= '<td style="background:#ebf2fa; padding:10px">';
-$message  .= '<b>Telefone<b/>';
-$message  .= '</td>';
-$message  .= '</tr>';
-$message  .= '<tr>';
-$message  .= '<td style="background:#fff; padding:10px">';
-$message  .= $telefone;
-$message  .= '</td>';
-$message  .= '</tr>';
-        
+                
 $message  .= '<tr>';
 $message  .= '<td style="background:#ebf2fa; padding:10px">';
 $message  .= '<b>Assunto<b/>';
@@ -116,7 +101,7 @@ $message  .= '</td>';
 $message  .= '</tr>';
 $message  .= '<tr>';
 $message  .= '<td style="background:#fff; padding:10px">';
-$message  .= nl2br(sanitize_textarea_field($_POST["mensagem"]));
+$message  .= nl2br(sanitize_textarea_field($_POST["comentario"]));
 $message  .= '</td>';
 $message  .= '</tr>';
         
@@ -125,12 +110,12 @@ $message  .= '</table>';
 // Configurar cabeçalhos do e-mail
 $headers = array(
     "From: $nome <$from>",
-    "Reply-To: $nome <" . $remetente . ">",
+    "Reply-To: $nome $sobrenome <" . $remetente . ">",
     "Content-Type: text/html; charset=UTF-8" // Define o conteúdo como HTML
 );
 
 // E-mail de destino (configurado no WordPress)
-$to = get_option('custom_email');
+$to = get_option('custom_email_denuncia');
 
 // Título do e-mail
 $title = $assunto ? 'Mensagem enviada do site: ' . $assunto : 'Mensagem enviada do site por ' . $nome;
@@ -139,14 +124,14 @@ $title = $assunto ? 'Mensagem enviada do site: ' . $assunto : 'Mensagem enviada 
 if (wp_mail($to, $title, $message, $headers)) {
     // Resposta de sucesso
     $response = array(
-        'message' => 'E-mail enviado com sucesso!',
+        'message' => 'Denúncia enviada com sucesso!',
         'status'  => 'ok',
     );
     http_response_code(200);
 } else {
     // Resposta de erro
     $response = array(
-        'message' => 'Falha ao enviar o e-mail.',
+        'message' => 'Falha ao enviar a Denúncia.',
         'status'  => '500',
         'to'      => $to,
         'title'   => $title,
