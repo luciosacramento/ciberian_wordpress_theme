@@ -503,17 +503,11 @@ class WP_MS_Sites_List_Table extends WP_List_Table {
 			$date = __( 'Y/m/d g:i:s a' );
 		}
 
-		/*
-		 * PN Mod: Start
-		 * MSSQL won't accept a date of 0000-00-00 00:00:00 and considers it invalid.
-		 * Default instead to 0001-01-01 00:00:00.
-		 */
-		if ( '0001-01-01 00:00:00' === $blog['last_updated'] ) {
+		if ( '0000-00-00 00:00:00' === $blog['last_updated'] ) {
 			_e( 'Never' );
 		} else {
 			echo mysql2date( $date, $blog['last_updated'] );
 		}
-		// PN Mod: End
 	}
 
 	/**
@@ -534,17 +528,11 @@ class WP_MS_Sites_List_Table extends WP_List_Table {
 			$date = __( 'Y/m/d g:i:s a' );
 		}
 
-		/*
-		 * PN Mod: Start
-		 * MSSQL won't accept a date of 0000-00-00 00:00:00 and considers it invalid.
-		 * Default instead to 0001-01-01 00:00:00.
-		 */
-		if ( '0001-01-01 00:00:00' === $blog['registered'] ) {
+		if ( '0000-00-00 00:00:00' === $blog['registered'] ) {
 			echo '&#x2014;';
 		} else {
 			echo mysql2date( $date, $blog['registered'] );
 		}
-		// PN Mod: End
 	}
 
 	/**

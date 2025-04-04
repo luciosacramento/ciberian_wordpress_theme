@@ -1,5 +1,4 @@
 <?php
-require_once(dirname(__FILE__) . '/translations.php');
 /**
  * WordPress database access abstraction class.
  *
@@ -54,8 +53,6 @@ define( 'ARRAY_N', 'ARRAY_N' );
  */
 #[AllowDynamicProperties]
 class wpdb {
-
-	var $last_query_total_rows = null;
 
 	/**
 	 * Whether to show SQL/DB errors.
@@ -139,8 +136,6 @@ class wpdb {
 	 * @var stdClass[]|null
 	 */
 	public $last_result;
-
-    var $query_statement_resource;
 
 	/**
 	 * Database query result.
@@ -567,15 +562,6 @@ class wpdb {
 	public $collate;
 
 	/**
-	 * Whether to use mysql_real_escape_string
-	 *
-	 * @since 2.8.0
-	 * @access public
-	 * @var bool
-	 */
-	var $real_escape = false;
-
-	/**
 	 * Database Username.
 	 *
 	 * @since 2.9.0
@@ -765,11 +751,8 @@ class wpdb {
 	 */
 	public function __construct( $dbuser, $dbpassword, $dbname, $dbhost ) {
 		if ( WP_DEBUG && WP_DEBUG_DISPLAY ) {
- 			$this->show_errors();
+			$this->show_errors();
 		}
-
-		// Use the `mysqli` extension if it exists unless `WP_USE_EXT_MYSQL` is defined as true.
-        $this->use_mysqli = false;
 
 		$this->dbuser     = $dbuser;
 		$this->dbpassword = $dbpassword;
@@ -932,24 +915,24 @@ class wpdb {
 	 */
 	public function set_charset( $dbh, $charset = null, $collate = null ) {
 		if ( ! isset( $charset ) ) {
- 			$charset = $this->charset;
+			$charset = $this->charset;
 		}
 		if ( ! isset( $collate ) ) {
- 			$collate = $this->collate;
+			$collate = $this->collate;
 		}
-		if ( $this->has_cap( 'collation', $dbh ) && !empty( $charset ) && false ) {
+		if ( $this->has_cap( 'collation' ) && ! empty( $charset ) ) {
 			$set_charset_succeeded = true;
 
-			if ( function_exists( 'mysql_set_charset' ) && $this->has_cap( 'set_charset', $dbh ) ) {
-				$set_charset_succeeded = mysql_set_charset( $charset, $dbh );
+			if ( function_exists( 'mysqli_set_charset' ) && $this->has_cap( 'set_charset' ) ) {
+				$set_charset_succeeded = mysqli_set_charset( $dbh, $charset );
 			}
+
 			if ( $set_charset_succeeded ) {
 				$query = $this->prepare( 'SET NAMES %s', $charset );
-					if ( ! empty( $collate ) ) {
- 						$query .= $this->prepare( ' COLLATE %s', $collate );
-					}
-				mysqli_query( $query, $dbh );
-				$this->real_escape = true;
+				if ( ! empty( $collate ) ) {
+					$query .= $this->prepare( ' COLLATE %s', $collate );
+				}
+				mysqli_query( $dbh, $query );
 			}
 		}
 	}
@@ -964,7 +947,6 @@ class wpdb {
 	 * @param array $modes Optional. A list of SQL modes to set. Default empty array.
 	 */
 	public function set_sql_mode( $modes = array() ) {
-        return;
 		if ( empty( $modes ) ) {
 			$res = mysqli_query( $this->dbh, 'SELECT @@SESSION.sql_mode' );
 
@@ -1298,7 +1280,7 @@ class wpdb {
 		}
 
 		if ( $this->dbh ) {
-			$escaped = mssql_escape( $data );
+			$escaped = mysqli_real_escape_string( $this->dbh, $data );
 		} else {
 			$class = get_class( $this );
 
@@ -1324,11 +1306,11 @@ class wpdb {
 	 */
 	public function _escape( $data ) {
 		if ( is_array( $data ) ) {
-			foreach ( (array) $data as $k => $v ) {
+			foreach ( $data as $k => $v ) {
 				if ( is_array( $v ) ) {
-					$data[$k] = $this->_escape( $v );
+					$data[ $k ] = $this->_escape( $v );
 				} else {
-					$data[$k] = $this->_real_escape( $v );
+					$data[ $k ] = $this->_real_escape( $v );
 				}
 			}
 		} else {
@@ -1353,10 +1335,10 @@ class wpdb {
 	 */
 	public function escape( $data ) {
 		if ( func_num_args() === 1 && function_exists( '_deprecated_function' ) ) {
- 			_deprecated_function( __METHOD__, '3.6.0', 'wpdb::prepare() or esc_sql()' );
+			_deprecated_function( __METHOD__, '3.6.0', 'wpdb::prepare() or esc_sql()' );
 		}
 		if ( is_array( $data ) ) {
-			foreach ( (array) $data as $k => $v ) {
+			foreach ( $data as $k => $v ) {
 				if ( is_array( $v ) ) {
 					$data[ $k ] = $this->escape( $v, 'recursive' );
 				} else {
@@ -1364,7 +1346,7 @@ class wpdb {
 				}
 			}
 		} else {
-			$data = $this->_weak_escape( $data );
+			$data = $this->_weak_escape( $data, 'internal' );
 		}
 
 		return $data;
@@ -1474,7 +1456,7 @@ class wpdb {
 	 */
 	public function prepare( $query, ...$args ) {
 		if ( is_null( $query ) ) {
- 			return;
+			return;
 		}
 
 		/*
@@ -1800,8 +1782,7 @@ class wpdb {
 	 *                Call wpdb::prepare() or wpdb::_real_escape() next.
 	 */
 	public function esc_like( $text ) {
-		//return addcslashes( $text, '_%\\' );
-		return str_replace(array("%", "_"), array("[%]", "[_]"), $text);
+		return addcslashes( $text, '_%\\' );
 	}
 
 	/**
@@ -1818,16 +1799,16 @@ class wpdb {
 		global $EZSQL_ERROR;
 
 		if ( ! $str ) {
-			$errors = sqlsrv_errors();
-
-			if( ! empty( $errors ) && is_array( $errors ) )
-				$str = $errors[ 0 ][ 'message' ] . ' Code - ' . $errors[ 0 ][ 'code' ];
-				
+			$str = mysqli_error( $this->dbh );
 		}
-		$EZSQL_ERROR[] = array( 'query' => $this->last_query, 'error_str' => $str );
+
+		$EZSQL_ERROR[] = array(
+			'query'     => $this->last_query,
+			'error_str' => $str,
+		);
 
 		if ( $this->suppress_errors ) {
- 			return false;
+			return false;
 		}
 
 		$caller = $this->get_caller();
@@ -1935,15 +1916,26 @@ class wpdb {
 	 * @since 0.71
 	 */
 	public function flush() {
-		$this->last_result = array();
-		$this->col_info    = null;
-		$this->last_query  = null;
+		$this->last_result   = array();
+		$this->col_info      = null;
+		$this->last_query    = null;
 		$this->rows_affected = 0;
 		$this->num_rows      = 0;
-		$this->last_error  = '';
+		$this->last_error    = '';
 
-		if ( is_resource( $this->result ) ) {
-			sqlsrv_free_stmt( $this->result );
+		if ( $this->result instanceof mysqli_result ) {
+			mysqli_free_result( $this->result );
+			$this->result = null;
+
+			// Confidence check before using the handle.
+			if ( empty( $this->dbh ) || ! ( $this->dbh instanceof mysqli ) ) {
+				return;
+			}
+
+			// Clear out any results from a multi-query.
+			while ( mysqli_more_results( $this->dbh ) ) {
+				mysqli_next_result( $this->dbh );
+			}
 		}
 	}
 
@@ -1963,15 +1955,44 @@ class wpdb {
 
 		$client_flags = defined( 'MYSQL_CLIENT_FLAGS' ) ? MYSQL_CLIENT_FLAGS : 0;
 
-		$new_link = true;
+		/*
+		 * Set the MySQLi error reporting off because WordPress handles its own.
+		 * This is due to the default value change from `MYSQLI_REPORT_OFF`
+		 * to `MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT` in PHP 8.1.
+		 */
+		mysqli_report( MYSQLI_REPORT_OFF );
 
-		ini_set( 'display_errors', 1 );
-		if ( getenv('ProjectNami.UTF8') ) {
-			$this->dbh = sqlsrv_connect( $this->dbhost, array( "Database"=> $this->dbname, "UID"=> $this->dbuser, "PWD"=> $this->dbpassword, 'ReturnDatesAsStrings'=>true, 'MultipleActiveResultSets'=> false, 'CharacterSet'=> 'UTF-8') );
- 		} else {
-			$this->dbh = sqlsrv_connect( $this->dbhost, array( "Database"=> $this->dbname, "UID"=> $this->dbuser, "PWD"=> $this->dbpassword, 'ReturnDatesAsStrings'=>true, 'MultipleActiveResultSets'=> false) );
- 		}
+		$this->dbh = mysqli_init();
 
+		$host    = $this->dbhost;
+		$port    = null;
+		$socket  = null;
+		$is_ipv6 = false;
+
+		$host_data = $this->parse_db_host( $this->dbhost );
+		if ( $host_data ) {
+			list( $host, $port, $socket, $is_ipv6 ) = $host_data;
+		}
+
+		/*
+		 * If using the `mysqlnd` library, the IPv6 address needs to be enclosed
+		 * in square brackets, whereas it doesn't while using the `libmysqlclient` library.
+		 * @see https://bugs.php.net/bug.php?id=67563
+		 */
+		if ( $is_ipv6 && extension_loaded( 'mysqlnd' ) ) {
+			$host = "[$host]";
+		}
+
+		if ( WP_DEBUG ) {
+			mysqli_real_connect( $this->dbh, $host, $this->dbuser, $this->dbpassword, null, $port, $socket, $client_flags );
+		} else {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@mysqli_real_connect( $this->dbh, $host, $this->dbuser, $this->dbpassword, null, $port, $socket, $client_flags );
+		}
+
+		if ( $this->dbh->connect_errno ) {
+			$this->dbh = null;
+		}
 
 		if ( ! $this->dbh && $allow_bail ) {
 			wp_load_translations_early();
@@ -1999,7 +2020,7 @@ class wpdb {
 
 			$message .= '<p>' . sprintf(
 				/* translators: %s: Support forums URL. */
-			__( 'If you are unsure what these terms mean you should probably contact your host. If you still need help you can always visit the <a href="%s">WordPress support forums</a>.' ),
+				__( 'If you are unsure what these terms mean you should probably contact your host. If you still need help you can always visit the <a href="%s">WordPress support forums</a>.' ),
 				__( 'https://wordpress.org/support/forums/' )
 			) . "</p>\n";
 
@@ -2017,7 +2038,7 @@ class wpdb {
 
 			$this->ready = true;
 			$this->set_sql_mode();
-			//$this->select( $this->dbname, $this->dbh );
+			$this->select( $this->dbname, $this->dbh );
 
 			return true;
 		}
@@ -2159,7 +2180,7 @@ class wpdb {
 
 		$message .= '<p>' . sprintf(
 			/* translators: %s: Support forums URL. */
-				__( 'If you are unsure what these terms mean you should probably contact your host. If you still need help you can always visit the <a href="%s">WordPress support forums</a>.' ),
+			__( 'If you are unsure what these terms mean you should probably contact your host. If you still need help you can always visit the <a href="%s">WordPress support forums</a>.' ),
 			__( 'https://wordpress.org/support/forums/' )
 		) . "</p>\n";
 
@@ -2241,56 +2262,40 @@ class wpdb {
 
 		$this->_do_query( $query );
 
-        // If there is an error, first attempt to translate
-        $errors = sqlsrv_errors();
-		if( ! empty( $errors ) && is_array( $errors ) ) {
-            switch ( $errors[ 0 ][ 'code' ] ){
-                case 102:
-                case 105:
-                case 145:
-                case 156:
-                case 195:
-                case 207:
-                case 241:
-                case 261:
-                case 321:
-                case 1018:
-                case 2627:
-                case 2812:
-				case 4145:
-                case 8120:
-				case 8155:
-                case 8127:
-                    if ( getenv( 'ProjectNamiLogTranslate' ) ){
-			            $begintransmsg = date("Y-m-d H:i:s") . " Error Code: " . $errors[ 0 ][ 'code' ] . " -- Begin Query translation attempt:" . PHP_EOL .  $query . PHP_EOL;
-                        error_log( $begintransmsg, 3, dirname( ini_get('error_log') ) . DIRECTORY_SEPARATOR . 'translate.log' ); 
-                     }
-			        $sqltranslate = new SQL_Translations( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		// Database server has gone away, try to reconnect.
+		$mysql_errno = 0;
 
-                    $query = $sqltranslate->translate( $query );
-                    if ( getenv( 'ProjectNamiLogTranslate' ) ){
-			            $endtransmsg = date("Y-m-d H:i:s") . " -- Translation result:" . PHP_EOL .  $query . PHP_EOL . PHP_EOL;
-                        error_log( $endtransmsg, 3, dirname( ini_get('error_log') ) . DIRECTORY_SEPARATOR . 'translate.log' ); 
-                    }
-    		        $this->last_query = $query;
-
-	    	        $this->_do_query( $query );
-
-		            // If there is an error then take note of it..
-		            $errors = sqlsrv_errors();
-					break;
-				default:
-					$begintransmsg = date("Y-m-d H:i:s") .  " Error Code: " . $errors[ 0 ][ 'code' ] . " -- Query NOT translated due to non-defined error code." . PHP_EOL .  $query . PHP_EOL;
-					error_log( $begintransmsg, 3, dirname( ini_get('error_log') ) . DIRECTORY_SEPARATOR . 'translate.log' );				
-            }
+		if ( $this->dbh instanceof mysqli ) {
+			$mysql_errno = mysqli_errno( $this->dbh );
+		} else {
+			/*
+			 * $dbh is defined, but isn't a real connection.
+			 * Something has gone horribly wrong, let's try a reconnect.
+			 */
+			$mysql_errno = 2006;
 		}
-		
-		if( ! empty( $errors ) && is_array( $errors ) ) {
-			$this->last_error = $errors[ 0 ][ 'message' ];
 
-			// Clear insert_id on a subsequent failed insert. 
-			if ( $this->insert_id && preg_match( '/^\s*(insert|replace)\s/i', $query ) ) 
-				$this->insert_id = 0; 
+		if ( empty( $this->dbh ) || 2006 === $mysql_errno ) {
+			if ( $this->check_connection() ) {
+				$this->_do_query( $query );
+			} else {
+				$this->insert_id = 0;
+				return false;
+			}
+		}
+
+		// If there is an error then take note of it.
+		if ( $this->dbh instanceof mysqli ) {
+			$this->last_error = mysqli_error( $this->dbh );
+		} else {
+			$this->last_error = __( 'Unable to retrieve the error message from MySQL' );
+		}
+
+		if ( $this->last_error ) {
+			// Clear insert_id on a subsequent failed insert.
+			if ( $this->insert_id && preg_match( '/^\s*(insert|replace)\s/i', $query ) ) {
+				$this->insert_id = 0;
+			}
 
 			$this->print_error();
 			return false;
@@ -2298,15 +2303,12 @@ class wpdb {
 
 		if ( preg_match( '/^\s*(create|alter|truncate|drop)\s/i', $query ) ) {
 			$return_val = $this->result;
-		} elseif ( preg_match( '/^\s*(insert|delete|update|replace)\s/i', $query ) && $this->query_statement_resource != false ) {
-			$this->rows_affected = sqlsrv_rows_affected( $this->query_statement_resource );
+		} elseif ( preg_match( '/^\s*(insert|delete|update|replace)\s/i', $query ) ) {
+			$this->rows_affected = mysqli_affected_rows( $this->dbh );
+
 			// Take note of the insert_id.
 			if ( preg_match( '/^\s*(insert|replace)\s/i', $query ) ) {
-				$this->insert_id = sqlsrv_query($this->dbh, 'SELECT isnull(scope_identity(), 0)');
-
-				$row = sqlsrv_fetch_array( $this->insert_id );
-					
-				$this->insert_id = $row[0];
+				$this->insert_id = mysqli_insert_id( $this->dbh );
 			}
 
 			// Return number of rows affected.
@@ -2314,18 +2316,17 @@ class wpdb {
 		} else {
 			$num_rows = 0;
 
-			while ( $row = @sqlsrv_fetch_object( $this->query_statement_resource ) ) {
-				$this->last_result[$num_rows] = $row;
-				$num_rows++;
+			if ( $this->result instanceof mysqli_result ) {
+				while ( $row = mysqli_fetch_object( $this->result ) ) {
+					$this->last_result[ $num_rows ] = $row;
+					++$num_rows;
+				}
 			}
 
 			// Log and return the number of rows selected.
 			$this->num_rows = $num_rows;
 			$return_val     = $num_rows;
 		}
-
-		if( isset( $this->last_result[0] ) && is_object( $this->last_result[0] ) && isset( $this->last_result[0]->found_rows ) )
-			$this->last_query_total_rows = $this->last_result[0]->found_rows;
 
 		return $return_val;
 	}
@@ -2344,10 +2345,10 @@ class wpdb {
 			$this->timer_start();
 		}
 
-		$this->result = sqlsrv_query( $this->dbh, $query );
- 
-		$this->query_statement_resource = $this->result;
-		
+		if ( ! empty( $this->dbh ) ) {
+			$this->result = mysqli_query( $this->dbh, $query );
+		}
+
 		++$this->num_queries;
 
 		if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
@@ -2591,68 +2592,23 @@ class wpdb {
 		if ( false === $data ) {
 			return false;
 		}
-		
+
 		$formats = array();
 		$values  = array();
 		foreach ( $data as $value ) {
+			if ( is_null( $value['value'] ) ) {
+				$formats[] = 'NULL';
+				continue;
+			}
+
 			$formats[] = $value['format'];
 			$values[]  = $value['value'];
 		}
 
-		$fields  = '[' . implode( '], [', array_keys( $data ) ) . ']';
+		$fields  = '`' . implode( '`, `', array_keys( $data ) ) . '`';
 		$formats = implode( ', ', $formats );
-	
-		if ($type == 'REPLACE') {
-			$columnNames = "'" . implode( "', '", array_keys($data)) . "'";
-			//Gets the key columns for the table		
-			$keyColQuery = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-							WHERE TABLE_NAME = '$table' AND COLUMN_NAME IN ($columnNames)";
-			$this->query($keyColQuery);
-			
-			$keyNames = array();
-			$keyValues = array();
-			$keyFormats = array();		
-			$on = array();
-			
-			foreach($this->last_result as $row) {
-				$keyNames[] = $row->COLUMN_NAME;        
-			}
-		
-			foreach($keyNames as $keyCol) {				
-				$keyValues[] = $data[$keyCol]['value'];
-				$keyFormats[] = $data[$keyCol]['format'];
-				$on[] = "sourceTable.[$keyCol] = targetTable.[$keyCol]";
-			}			
-			
-					
-			$set = array();		
-			foreach($data as $field => $value) {			
-				$set[] = "[$field] = " . $value['format'];			
-			}
-			//exa:		
-			//$on[0] == "sourceTable.[keyCol1] = targetTable.[keyCol1]"
-			//$on[1] == "sourceTable.[keyCol2] = targetTable.[keyCol2]"
-			//$set[0] == "[field1] = %s"
-			//$set[1] == "[field2] = %d"
-			$on = implode(' AND ', $on);
-			$set = implode(', ', $set);
-			$keyFormat = implode(', ', $keyFormats); //if more than one key, looks like: keyCol1, keyCol2
-			$keyName = '[' . implode('], [', $keyNames) . ']';
-			//exa: $on == "sourceTable.keyCol1 = targetTable.keyCol1 AND sourceTable.keyCol2 = targetTable.keyCol2"
-			//exa: $set == "[field1] = %s, [field2] = %d"
-			$sql = "MERGE INTO $table WITH (HOLDLOCK) AS targetTable USING (SELECT $keyFormat) AS sourceTable ($keyName) ";
-			$sql .= "ON ($on)";
-            if ( trim( $set ) != '' ){
-    			$sql .= " WHEN MATCHED THEN UPDATE SET $set ";
-            }
-			$sql .= " WHEN NOT MATCHED THEN INSERT ($fields) VALUES ($formats);";
-			//Since there are the keyFormat and two sets of the original formats one for the UPDATE and one for the INSERT, 
-			//we need to concatenate the $keyFormats with 2 x $formats and $keyValues with 2 x $values arrays so that prepare can correctly match them up		
-			$values = array_merge($keyValues, $values, $values);
-		} else {
-			//INSERT
-			$sql = "$type INTO [$table] ($fields) VALUES ($formats)";
-		}
+
+		$sql = "$type INTO `$table` ($fields) VALUES ($formats)";
 
 		$this->check_current_query = false;
 		return $this->query( $this->prepare( $sql, $values ) );
@@ -2737,18 +2693,28 @@ class wpdb {
 		$conditions = array();
 		$values     = array();
 		foreach ( $data as $field => $value ) {
-			$fields[] = "[$field] = " . $value['format'];
+			if ( is_null( $value['value'] ) ) {
+				$fields[] = "`$field` = NULL";
+				continue;
+			}
+
+			$fields[] = "`$field` = " . $value['format'];
 			$values[] = $value['value'];
 		}
 		foreach ( $where as $field => $value ) {
-			$conditions[] = "[$field] = " . $value['format'];
-			$values[] = $value['value'];
+			if ( is_null( $value['value'] ) ) {
+				$conditions[] = "`$field` IS NULL";
+				continue;
+			}
+
+			$conditions[] = "`$field` = " . $value['format'];
+			$values[]     = $value['value'];
 		}
 
-		$fields = implode( ', ', $fields );
+		$fields     = implode( ', ', $fields );
 		$conditions = implode( ' AND ', $conditions );
 
-		$sql = "UPDATE [$table] SET $fields WHERE $conditions";
+		$sql = "UPDATE `$table` SET $fields WHERE $conditions";
 
 		$this->check_current_query = false;
 		return $this->query( $this->prepare( $sql, $values ) );
@@ -2807,13 +2773,18 @@ class wpdb {
 		$conditions = array();
 		$values     = array();
 		foreach ( $where as $field => $value ) {
-			$conditions[] = "[$field] = " . $value['format'];
-			$values[] = $value['value'];
+			if ( is_null( $value['value'] ) ) {
+				$conditions[] = "`$field` IS NULL";
+				continue;
+			}
+
+			$conditions[] = "`$field` = " . $value['format'];
+			$values[]     = $value['value'];
 		}
 
 		$conditions = implode( ' AND ', $conditions );
 
-		$sql = "DELETE FROM [$table] WHERE $conditions";
+		$sql = "DELETE FROM `$table` WHERE $conditions";
 
 		$this->check_current_query = false;
 		return $this->query( $this->prepare( $sql, $values ) );
@@ -3061,13 +3032,8 @@ class wpdb {
 		}
 
 		// Extract var out of cached results based on x,y vals.
-		if ( !empty( $this->last_result[$y] ) ) {
-			
-			if( is_object( $this->last_result [$y]) )
-				$values = array_values( get_object_vars( $this->last_result[$y] ) );
-			else
-				$values = array_values( $this->last_result[$y] );
-		
+		if ( ! empty( $this->last_result[ $y ] ) ) {
+			$values = array_values( get_object_vars( $this->last_result[ $y ] ) );
 		}
 
 		// If there is a value return it, else return null.
@@ -3149,10 +3115,6 @@ class wpdb {
 			}
 		}
 		return $new_array;
-	}
-
-	function get_query_row_count( $query ) {
-	//	sql
 	}
 
 	/**
@@ -3259,10 +3221,6 @@ class wpdb {
 		if ( isset( $this->table_charset[ $tablekey ] ) ) {
 			return $this->table_charset[ $tablekey ];
 		}
-
-        $charset = 'latin1';
-		$this->table_charset[ $tablekey ] = $charset;
-		return $charset;
 
 		$charsets = array();
 		$columns  = array();
@@ -3415,10 +3373,7 @@ class wpdb {
 	 * }
 	 */
 	public function get_col_length( $table, $column ) {
-        //Skip for PN
-        return false;
-
-		$tablekey = strtolower( $table );
+		$tablekey  = strtolower( $table );
 		$columnkey = strtolower( $column );
 
 		// Skip this entirely if this isn't a MySQL database.
@@ -3527,9 +3482,6 @@ class wpdb {
 	 * @return bool True if the collation is safe, false if it isn't.
 	 */
 	protected function check_safe_collation( $query ) {
-        // Using nvarchar with MSSQL, so collation should not matter
-        return true;
-
 		if ( $this->checking_collation ) {
 			return true;
 		}
@@ -3600,7 +3552,6 @@ class wpdb {
 	 *                        a WP_Error object is returned.
 	 */
 	protected function strip_invalid_text( $data ) {
-        return $data;
 		$db_check_string = false;
 
 		foreach ( $data as &$value ) {
@@ -3876,7 +3827,7 @@ class wpdb {
 		 */
 		if ( preg_match( '/^\s*SHOW\s+(?:TABLE\s+STATUS|(?:FULL\s+)?TABLES)\s+(?:WHERE\s+Name\s+)?LIKE\s*("|\')((?:[\\\\0-9a-zA-Z$_.-]|[\xC2-\xDF][\x80-\xBF])+)%?\\1/is', $query, $maybe ) ) {
 			return str_replace( '\\_', '_', $maybe[2] );
-        }
+		}
 
 		// Big pattern for the rest of the table-related queries.
 		if ( preg_match(
@@ -3910,35 +3861,15 @@ class wpdb {
 	 * @since 3.5.0
 	 */
 	protected function load_col_info() {
-    /**
-     * Derived in part from
-     *
-     * WordPress DB Class in W3 Total Cache
-     *
-     * Original code from {@link http://php.justinvincent.com Justin Vincent (justin@visunet.ie)}
-     *
-     */
 		if ( $this->col_info ) {
 			return;
-        }
+		}
 
-        foreach( sqlsrv_field_metadata( $this->result ) as $field) {
-                $new_field = new stdClass();
-                $new_field->name = $field->name;
-                $new_field->table = null;
-                $new_field->def = null;
-                $new_field->max_length = $field->size;
-                $new_field->not_null = true;
-                $new_field->primary_key = null;
-                $new_field->unique_key = null;
-                $new_field->multiple_key = null;
-                $new_field->numeric = null;
-                $new_field->blob = null;
-                $new_field->type = $field->type;
-                $new_field->unsigned = null;
-                $new_field->zerofill = null;
-                $this->col_info[] = $new_field;
-        }
+		$num_fields = mysqli_num_fields( $this->result );
+
+		for ( $i = 0; $i < $num_fields; $i++ ) {
+			$this->col_info[ $i ] = mysqli_fetch_field( $this->result );
+		}
 	}
 
 	/**
@@ -4017,7 +3948,7 @@ class wpdb {
 			}
 
 			if ( $error ) {
-				$message = '<p><code>' . $error[ 0 ][ 'message' ] . "</code></p>\n" . $message;
+				$message = '<p><code>' . $error . "</code></p>\n" . $message;
 			}
 
 			wp_die( $message );
@@ -4136,19 +4067,52 @@ class wpdb {
 	 */
 	public function has_cap( $db_cap ) {
 		$db_version     = $this->db_version();
+		$db_server_info = $this->db_server_info();
+
+		/*
+		 * Account for MariaDB version being prefixed with '5.5.5-' on older PHP versions.
+		 *
+		 * Note: str_contains() is not used here, as this file can be included
+		 * directly outside of WordPress core, e.g. by HyperDB, in which case
+		 * the polyfills from wp-includes/compat.php are not loaded.
+		 */
+		if ( '5.5.5' === $db_version && false !== strpos( $db_server_info, 'MariaDB' )
+			&& PHP_VERSION_ID < 80016 // PHP 8.0.15 or older.
+		) {
+			// Strip the '5.5.5-' prefix and set the version to the correct value.
+			$db_server_info = preg_replace( '/^5\.5\.5-(.*)/', '$1', $db_server_info );
+			$db_version     = preg_replace( '/[^0-9.].*/', '', $db_server_info );
+		}
 
 		switch ( strtolower( $db_cap ) ) {
-			case 'collation' :    // @since 2.5.0
-			case 'group_concat' : // @since 2.7.0
-			case 'subqueries' :   // @since 2.7.0
+			case 'collation':    // @since 2.5.0
+			case 'group_concat': // @since 2.7.0
+			case 'subqueries':   // @since 2.7.0
 				return version_compare( $db_version, '4.1', '>=' );
-			case 'set_charset' :
+			case 'set_charset':
 				return version_compare( $db_version, '5.0.7', '>=' );
-			case 'utf8mb4' :      // @since 4.1.0
+			case 'utf8mb4':      // @since 4.1.0
 				if ( version_compare( $db_version, '5.5.3', '<' ) ) {
- 					return false;
- 				}
-			case 'utf8mb4_520' : // @since 4.6.0
+					return false;
+				}
+
+				$client_version = mysqli_get_client_info();
+
+				/*
+				 * libmysql has supported utf8mb4 since 5.5.3, same as the MySQL server.
+				 * mysqlnd has supported utf8mb4 since 5.0.9.
+				 *
+				 * Note: str_contains() is not used here, as this file can be included
+				 * directly outside of WordPress core, e.g. by HyperDB, in which case
+				 * the polyfills from wp-includes/compat.php are not loaded.
+				 */
+				if ( false !== strpos( $client_version, 'mysqlnd' ) ) {
+					$client_version = preg_replace( '/^\D+([\d.]+).*/', '$1', $client_version );
+					return version_compare( $client_version, '5.0.9', '>=' );
+				} else {
+					return version_compare( $client_version, '5.5.3', '>=' );
+				}
+			case 'utf8mb4_520': // @since 4.6.0
 				return version_compare( $db_version, '5.6', '>=' );
 			case 'identifier_placeholders': // @since 6.2.0
 				/*
@@ -4180,102 +4144,17 @@ class wpdb {
 	 * @return string|null Version number on success, null on failure.
 	 */
 	public function db_version() {
-		return $this->get_var( "SELECT convert(varchar,SERVERPROPERTY('productversion')) as 'version'" );
+		return preg_replace( '/[^0-9.].*/', '', $this->db_server_info() );
 	}
 
 	/**
-	 * Retrieves the SQL Server Edition.
+	 * Returns the version of the MySQL server.
 	 *
-	 * @since PN 1.4.1
+	 * @since 5.5.0
 	 *
-	 * @return null|string Null on failure, edition name on success.
+	 * @return string Server version as a string.
 	 */
-	public function db_edition() {
-		return $this->get_var( "SELECT convert(varchar,SERVERPROPERTY('edition')) as 'edition'" );
-	}
-
-	/**
-	 * Perform SQL query with parameters
-	 *
-	 * @since PN 1.4.3
-	 *
-	 * @param string $query Database query, array $params Query parameters
-	 * @return int|false Number of rows affected/selected or false on error
-	 */
-	public function query_with_params( $query, $params = array() ) {
-		if ( ! $this->ready ) {
-			$this->check_current_query = true;
-			return false;
-		}
-
-		$this->flush();
-
-		// Log how the function was called
-		$this->func_call = "\$db->query(\"$query\")";
-
-		$this->check_current_query = true;
-
-		// Keep track of the last query for debug.
-		$this->last_query = $query;
-
-		// Do Query
-		if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
-			$this->timer_start();
-		}
-
-		$this->result = sqlsrv_query( $this->dbh, $query, $params );
- 
-		$this->query_statement_resource = $this->result;
-		
-		$this->num_queries++;
-
-		if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
-			$this->queries[] = array( $query, $this->timer_stop(), $this->get_caller() );
-		}
-
-        $errors = sqlsrv_errors();
-		
-		if( ! empty( $errors ) && is_array( $errors ) ) {
-			$this->last_error = $errors[ 0 ][ 'message' ];
-
-			// Clear insert_id on a subsequent failed insert. 
-			if ( $this->insert_id && preg_match( '/^\s*(insert|replace)\s/i', $query ) ) 
-				$this->insert_id = 0; 
-
-			$this->print_error();
-			return false;
-		}
-
-		if ( preg_match( '/^\s*(create|alter|truncate|drop)\s/i', $query ) ) {
-			$return_val = $this->result;
-		} elseif ( preg_match( '/^\s*(insert|delete|update|replace)\s/i', $query ) && $this->query_statement_resource != false ) {
-			$this->rows_affected = sqlsrv_rows_affected( $this->query_statement_resource );
-			// Take note of the insert_id
-			if ( preg_match( '/^\s*(insert|replace)\s/i', $query ) ) {
-				$this->insert_id = sqlsrv_query($this->dbh, 'SELECT isnull(scope_identity(), 0)');
-
-				$row = sqlsrv_fetch_array( $this->insert_id );
-					
-				$this->insert_id = $row[0];
-			}
-			// Return number of rows affected
-			$return_val = $this->rows_affected;
-		} else {
-			$num_rows = 0;
-			while ( $row = @sqlsrv_fetch_object( $this->query_statement_resource ) ) {
-				$this->last_result[$num_rows] = $row;
-				$num_rows++;
-			}
-
-			// Log number of rows the query returned
-			// and return number of rows selected
-			$this->num_rows = $num_rows;
-			$return_val     = $num_rows;
-		}
-
-		if( isset( $this->last_result[0] ) && is_object( $this->last_result[0] ) && isset( $this->last_result[0]->found_rows ) )
-			$this->last_query_total_rows = $this->last_result[0]->found_rows;
-
-		return $return_val;
+	public function db_server_info() {
+		return mysqli_get_server_info( $this->dbh );
 	}
 }

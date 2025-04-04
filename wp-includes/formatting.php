@@ -1450,8 +1450,8 @@ function utf8_uri_encode( $utf8_string, $length = 0, $encode_ascii_characters = 
  *
  * |   Code   | Glyph | Replacement |                Description                |
  * | -------- | ----- | ----------- | ----------------------------------------- |
- * | U+018F   | ╞Å     | E           | Latin capital letter ╞Å                    |
- * | U+0259   | ╟¥     | e           | Latin small letter ╟¥                      |
+ * | U+018F   | Ə     | E           | Latin capital letter Ə                    |
+ * | U+0259   | ǝ     | e           | Latin small letter ǝ                      |
  * | U+0218   | Ș     | S           | Latin capital letter S with comma below   |
  * | U+0219   | ș     | s           | Latin small letter s with comma below     |
  * | U+021A   | Ț     | T           | Latin capital letter T with comma below   |
@@ -1554,7 +1554,7 @@ function utf8_uri_encode( $utf8_string, $length = 0, $encode_ascii_characters = 
  * | U+1EF9   | ỹ     | y           | Latin small letter y with tilde                       |
  *
  * German (`de_DE`), German formal (`de_DE_formal`), German (Switzerland) formal (`de_CH`),
- * and German (Switzerland) informal (`de_CH_informal`) locales:
+ * German (Switzerland) informal (`de_CH_informal`), and German (Austria) (`de_AT`) locales:
  *
  * |   Code   | Glyph | Replacement |               Description               |
  * | -------- | ----- | ----------- | --------------------------------------- |
@@ -1819,8 +1819,8 @@ function remove_accents( $text, $locale = '' ) {
 			'ž' => 'z',
 			'ſ' => 's',
 			// Decompositions for Latin Extended-B.
-			'╞Å' => 'E',
-			'╟¥' => 'e',
+			'Ə' => 'E',
+			'ǝ' => 'e',
 			'Ș' => 'S',
 			'ș' => 's',
 			'Ț' => 'T',
@@ -2031,7 +2031,7 @@ function sanitize_file_name( $filename ) {
 	$filename_raw = $filename;
 	$filename     = remove_accents( $filename );
 
-	$special_chars = array( '?', '[', ']', '/', '\\', '=', '<', '>', ':', ';', ',', "'", '"', '&', '$', '#', '*', '(', ')', '|', '~', '`', '!', '{', '}', '%', '+', 'ΓÇÖ', '┬½', '┬╗', 'ΓÇ¥', 'ΓÇ£', chr( 0 ) );
+	$special_chars = array( '?', '[', ']', '/', '\\', '=', '<', '>', ':', ';', ',', "'", '"', '&', '$', '#', '*', '(', ')', '|', '~', '`', '!', '{', '}', '%', '+', '’', '«', '»', '”', '“', chr( 0 ) );
 
 	// Check for support for utf8 in the installed PCRE library once and store the result in a static.
 	static $utf8_pcre = null;

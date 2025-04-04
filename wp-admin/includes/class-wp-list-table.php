@@ -711,11 +711,6 @@ class WP_List_Table {
 			return;
 		}
 
-		/*
-		 * PN Mod: Start
-		 * MSSQL can't ORDER BY post_date alone since it is not actually being SELECTed.
-		 * The workaround is to ORDER BY both YEAR( post_date ) DESC and MONTH( post_date ) DESC to get the same effect.
-		 */
 		/**
 		 * Filters whether to short-circuit performing the months dropdown query.
 		 *
@@ -740,12 +735,11 @@ class WP_List_Table {
 					FROM $wpdb->posts
 					WHERE post_type = %s
 					$extra_checks
-					ORDER BY YEAR( post_date ) DESC, MONTH( post_date ) DESC",
+					ORDER BY post_date DESC",
 					$post_type
 				)
 			);
 		}
-		// PN Mod: End
 
 		/**
 		 * Filters the 'Months' drop-down results.

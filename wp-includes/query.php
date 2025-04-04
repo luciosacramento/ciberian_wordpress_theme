@@ -1067,14 +1067,14 @@ function wp_old_slug_redirect() {
 
 		if ( is_array( $post_type ) ) {
 			if ( count( $post_type ) > 1 ) {
- 				return;
+				return;
 			}
 			$post_type = reset( $post_type );
 		}
 
 		// Do not attempt redirect for hierarchical post types.
 		if ( is_post_type_hierarchical( $post_type ) ) {
- 			return;
+			return;
 		}
 
 		$id = _find_post_by_old_slug( $post_type );
@@ -1093,7 +1093,7 @@ function wp_old_slug_redirect() {
 		$id = apply_filters( 'old_slug_redirect_post_id', $id );
 
 		if ( ! $id ) {
- 			return;
+			return;
 		}
 
 		$link = get_permalink( $id );
@@ -1150,7 +1150,7 @@ function _find_post_by_old_slug( $post_type ) {
 		$query .= $wpdb->prepare( ' AND MONTH(post_date) = %d', get_query_var( 'monthnum' ) );
 	}
 	if ( get_query_var( 'day' ) ) {
-		$query .= $wpdb->prepare( ' AND DAY(post_date) = %d', get_query_var( 'day' ) );
+		$query .= $wpdb->prepare( ' AND DAYOFMONTH(post_date) = %d', get_query_var( 'day' ) );
 	}
 
 	$key          = md5( $query );
@@ -1190,7 +1190,7 @@ function _find_post_by_old_date( $post_type ) {
 		$date_query .= $wpdb->prepare( ' AND MONTH(pm_date.meta_value) = %d', get_query_var( 'monthnum' ) );
 	}
 	if ( get_query_var( 'day' ) ) {
-		$date_query .= $wpdb->prepare( ' AND DAY(pm_date.meta_value) = %d', get_query_var( 'day' ) );
+		$date_query .= $wpdb->prepare( ' AND DAYOFMONTH(pm_date.meta_value) = %d', get_query_var( 'day' ) );
 	}
 
 	$id = 0;

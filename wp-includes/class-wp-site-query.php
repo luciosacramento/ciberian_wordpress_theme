@@ -480,37 +480,31 @@ class WP_Site_Query {
 
 			$orderby = implode( ', ', $orderby_array );
 		} else {
-			$orderby = $wpdb->blogs . ".blog_id $order";
+			$orderby = "{$wpdb->blogs}.blog_id $order";
 		}
 
 		$number = absint( $this->query_vars['number'] );
 		$offset = absint( $this->query_vars['offset'] );
 		$limits = '';
 
-		// Disable LIMIT when no ORDER BY
-		if ( ! $orderby ) {
-			$limits = '';
-		} elseif ( ! empty( $number ) ) {
+		if ( ! empty( $number ) ) {
 			if ( $offset ) {
-				$limits = 'OFFSET ' . $offset . ' ROWS FETCH NEXT ' . $number . ' ROWS ONLY';
+				$limits = 'LIMIT ' . $offset . ',' . $number;
 			} else {
-				$limits = 'OFFSET 0 ROWS FETCH NEXT ' . $number . ' ROWS ONLY';
+				$limits = 'LIMIT ' . $number;
 			}
 		}
 
 		if ( $this->query_vars['count'] ) {
-			$fields = 'COUNT(*) as qty';
-			$orderby = ''; // ORDER BY breaks in MSSQL here since comment_date_gmt won't be in the query statement.
-			$order = '';
-			$limits = '';
+			$fields = 'COUNT(*)';
 		} else {
-			$fields = $wpdb->blogs . '.blog_id';
+			$fields = "{$wpdb->blogs}.blog_id";
 		}
 
 		// Parse site IDs for an IN clause.
 		$site_id = absint( $this->query_vars['ID'] );
 		if ( ! empty( $site_id ) ) {
-			$this->sql_clauses['where']['ID'] = $wpdb->prepare( '{$wpdb->blogs}.blog_id = %d', $site_id );
+			$this->sql_clauses['where']['ID'] = $wpdb->prepare( "{$wpdb->blogs}.blog_id = %d", $site_id );
 		}
 
 		// Parse site IDs for an IN clause.
@@ -589,7 +583,7 @@ class WP_Site_Query {
 
 		if ( is_numeric( $this->query_vars['public'] ) ) {
 			$public                               = absint( $this->query_vars['public'] );
-			$this->sql_clauses['where']['public'] = $wpdb->prepare( '[public] = %d ', $public );
+			$this->sql_clauses['where']['public'] = $wpdb->prepare( 'public = %d ', $public );
 		}
 
 		if ( is_numeric( $this->query_vars['lang_id'] ) ) {
@@ -690,7 +684,12 @@ class WP_Site_Query {
 			$orderby = "ORDER BY $orderby";
 		}
 
-		$this->sql_clauses['select']  = "SELECT $fields";
+		$found_rows = '';
+		if ( ! $this->query_vars['no_found_rows'] ) {
+			$found_rows = 'SQL_CALC_FOUND_ROWS';
+		}
+
+		$this->sql_clauses['select']  = "SELECT $found_rows $fields";
 		$this->sql_clauses['from']    = "FROM $wpdb->blogs $join";
 		$this->sql_clauses['groupby'] = $groupby;
 		$this->sql_clauses['orderby'] = $orderby;
@@ -710,10 +709,6 @@ class WP_Site_Query {
 		}
 
 		$site_ids = $wpdb->get_col( $this->request );
-
-		if ( ! $this->query_vars['no_found_rows'] ) {
-			$wpdb->query("select count(*) as [found_rows] {$this->sql_clauses['from']} {$where} {$this->sql_clauses['groupby']}");
-		}
 
 		return array_map( 'intval', $site_ids );
 	}
@@ -740,8 +735,7 @@ class WP_Site_Query {
 			 */
 			$found_sites_query = apply_filters( 'found_sites_query', 'SELECT FOUND_ROWS()', $this );
 
-			//$this->found_sites = (int) $wpdb->get_var( $found_sites_query );
-            $this->found_sites = $wpdb->last_query_total_rows;
+			$this->found_sites = (int) $wpdb->get_var( $found_sites_query );
 		}
 	}
 
@@ -812,13 +806,13 @@ class WP_Site_Query {
 				$parsed = 'site_id';
 				break;
 			case 'domain_length':
-				$parsed = 'LEN(domain)';
+				$parsed = 'CHAR_LENGTH(domain)';
 				break;
 			case 'path_length':
-				$parsed = 'LEN(path)';
+				$parsed = 'CHAR_LENGTH(path)';
 				break;
 			case 'id':
-				$parsed = $wpdb->blogs . '.blog_id';
+				$parsed = "{$wpdb->blogs}.blog_id";
 				break;
 		}
 

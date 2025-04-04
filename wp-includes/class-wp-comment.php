@@ -73,7 +73,7 @@ final class WP_Comment {
 	 * @since 4.4.0
 	 * @var string
 	 */
-	public $comment_date = '0001-01-01 00:00:00';
+	public $comment_date = '0000-00-00 00:00:00';
 
 	/**
 	 * Comment GMT date in YYYY-MM-DD HH::MM:SS format.
@@ -81,7 +81,7 @@ final class WP_Comment {
 	 * @since 4.4.0
 	 * @var string
 	 */
-	public $comment_date_gmt = '0001-01-01 00:00:00';
+	public $comment_date_gmt = '0000-00-00 00:00:00';
 
 	/**
 	 * Comment content.
@@ -191,7 +191,7 @@ final class WP_Comment {
 		$_comment = wp_cache_get( $comment_id, 'comment' );
 
 		if ( ! $_comment ) {
-			$_comment = $wpdb->get_row( $wpdb->prepare( "SELECT TOP 1 * FROM $wpdb->comments WHERE comment_ID = %d", $comment_id ) );
+			$_comment = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->comments WHERE comment_ID = %d LIMIT 1", $comment_id ) );
 
 			if ( ! $_comment ) {
 				return false;

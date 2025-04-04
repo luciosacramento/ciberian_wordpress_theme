@@ -556,7 +556,7 @@ function wp_normalize_site_data( $data ) {
 			continue;
 		}
 
-		if ( empty( $data[ $date_field ] ) || '0000-00-00 00:00:00' || '0001-01-01 00:00:00' === $data[ $date_field ] ) {
+		if ( empty( $data[ $date_field ] ) || '0000-00-00 00:00:00' === $data[ $date_field ] ) {
 			unset( $data[ $date_field ] );
 		}
 	}
@@ -600,8 +600,8 @@ function wp_validate_site_data( $errors, $data, $old_site = null ) {
 			break;
 		}
 
-		// Allow '0001-01-01 00:00:00', although it be stripped out at this point.
-		if ( '0001-01-01 00:00:00' !== $data[ $date_field ] ) {
+		// Allow '0000-00-00 00:00:00', although it be stripped out at this point.
+		if ( '0000-00-00 00:00:00' !== $data[ $date_field ] ) {
 			$month      = substr( $data[ $date_field ], 5, 2 );
 			$day        = substr( $data[ $date_field ], 8, 2 );
 			$year       = substr( $data[ $date_field ], 0, 4 );
@@ -836,7 +836,7 @@ function wp_uninitialize_site( $site_id ) {
 	$drop_tables = apply_filters( 'wpmu_drop_tables', $tables, $site->id );
 
 	foreach ( (array) $drop_tables as $table ) {
-		$wpdb->query( "DROP TABLE IF EXISTS $table" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query( "DROP TABLE IF EXISTS `$table`" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 
 	/**
@@ -940,7 +940,7 @@ function wp_is_site_initialized( $site_id ) {
 	}
 
 	$suppress = $wpdb->suppress_errors();
-	$result   = (bool) $wpdb->get_results( "exec sp_columns {$wpdb->posts}" );
+	$result   = (bool) $wpdb->get_results( "DESCRIBE {$wpdb->posts}" );
 	$wpdb->suppress_errors( $suppress );
 
 	if ( $switch ) {

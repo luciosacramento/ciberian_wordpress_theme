@@ -178,7 +178,6 @@ function wp_print_media_templates() {
 			<span class="dashicons dashicons-arrow-down" aria-hidden="true"></span>
 		</button>
 		<div class="media-frame-menu"></div>
-		<div class="media-frame-title"></div>
 		<div class="media-frame-tab-panel">
 			<div class="media-frame-router"></div>
 			<div class="media-frame-content"></div>

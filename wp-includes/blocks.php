@@ -2168,12 +2168,12 @@ function get_comments_pagination_arrow( $block, $pagination_type = 'next' ) {
 	$arrow_map = array(
 		'none'    => '',
 		'arrow'   => array(
-			'next'     => 'ΓåÆ',
-			'previous' => 'ΓåÉ',
+			'next'     => '→',
+			'previous' => '←',
 		),
 		'chevron' => array(
-			'next'     => '┬╗',
-			'previous' => '┬½',
+			'next'     => '»',
+			'previous' => '«',
 		),
 	);
 	if ( ! empty( $block->context['comments/paginationArrow'] ) && ! empty( $arrow_map[ $block->context['comments/paginationArrow'] ][ $pagination_type ] ) ) {

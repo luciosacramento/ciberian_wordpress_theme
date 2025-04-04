@@ -2870,7 +2870,7 @@ function wp_get_inline_script_tag( $data, $attributes = array() ) {
 	 *     <script>console.log('&hellip;');</script>
 	 *
 	 *     In an HTML document this would print "&hellip;" to the console,
-	 *     but in an XHTML document it would print "ΓÇª" to the console.
+	 *     but in an XHTML document it would print "…" to the console.
 	 *
 	 *     <script>console.log('An image is <img> in HTML');</script>
 	 *

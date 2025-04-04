@@ -251,7 +251,7 @@ class WP_User {
 
 		$user = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT TOP 1 * FROM $wpdb->users WHERE $db_field = %s",
+				"SELECT * FROM $wpdb->users WHERE $db_field = %s LIMIT 1",
 				$value
 			)
 		);

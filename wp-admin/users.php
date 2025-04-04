@@ -312,15 +312,15 @@ switch ( $wp_list_table->current_action() ) {
 
 		if ( $user_ids && ! $users_have_content ) {
 			if ( $wpdb->get_var(
-				"SELECT TOP 1 ID FROM {$wpdb->posts}
+				"SELECT ID FROM {$wpdb->posts}
 				WHERE post_author IN( " . implode( ',', $user_ids ) . ' )
-				'
+				LIMIT 1'
 			) ) {
 				$users_have_content = true;
 			} elseif ( $wpdb->get_var(
-				"SELECT TOP 1 link_id FROM {$wpdb->links}
+				"SELECT link_id FROM {$wpdb->links}
 				WHERE link_owner IN( " . implode( ',', $user_ids ) . ' )
-				'
+				LIMIT 1'
 			) ) {
 				$users_have_content = true;
 			}

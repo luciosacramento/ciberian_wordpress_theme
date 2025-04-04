@@ -194,7 +194,7 @@ function get_option( $option, $default_value = false ) {
 					return apply_filters( "default_option_{$option}", $default_value, $option, $passed_default );
 				}
 
-				$row = $wpdb->get_row( $wpdb->prepare( "SELECT TOP 1 option_value FROM $wpdb->options WHERE option_name = %s", $option ) );
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s LIMIT 1", $option ) );
 
 				// Has to be get_row() instead of get_var() because of funkiness with 0, false, null values.
 				if ( is_object( $row ) ) {
@@ -211,7 +211,7 @@ function get_option( $option, $default_value = false ) {
 		}
 	} else {
 		$suppress = $wpdb->suppress_errors();
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT TOP 1 option_value FROM $wpdb->options WHERE option_name = %s", $option ) );
+		$row      = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s LIMIT 1", $option ) );
 		$wpdb->suppress_errors( $suppress );
 
 		if ( is_object( $row ) ) {
@@ -1003,8 +1003,8 @@ function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' )
 	 */
 	do_action( 'add_option', $option, $value );
 
-	$result = $wpdb->query_with_params( "IF NOT EXISTS (SELECT * FROM [$wpdb->options] with (nolock) WHERE [option_name] = ?) INSERT INTO [$wpdb->options] ([option_name], [option_value], [autoload]) VALUES (?, ?, ?) else UPDATE [$wpdb->options] set [option_value] = ?, [autoload] = ? where [option_name] = ?", array( array($option, SQLSRV_PARAM_IN), array($option, SQLSRV_PARAM_IN), array($serialized_value, SQLSRV_PARAM_IN), array($autoload, SQLSRV_PARAM_IN), array($serialized_value, SQLSRV_PARAM_IN), array($autoload, SQLSRV_PARAM_IN), array($option, SQLSRV_PARAM_IN) ) );
-	if ( $result === false ) {
+	$result = $wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `option_name` = VALUES(`option_name`), `option_value` = VALUES(`option_value`), `autoload` = VALUES(`autoload`)", $option, $serialized_value, $autoload ) );
+	if ( ! $result ) {
 		return false;
 	}
 
@@ -1392,62 +1392,47 @@ function delete_expired_transients( $force_db = false ) {
 		return;
 	}
 
-	$dbtransients = $wpdb->get_results( $wpdb->prepare(
-		"SELECT TOP 1000 * from {$wpdb->options}
-			WHERE option_name LIKE %s 
-			AND option_value < %d",
-		$wpdb->esc_like( '_transient_timeout_' ) . '%',
-		time()
-	) );
-
-	foreach ( $dbtransients as $dbtransient ) {
-		$wpdb->query( $wpdb->prepare( "delete {$wpdb->options} where option_name = REPLACE( %s , '_timeout', '')", $dbtransient->option_name ) );
-		$wpdb->query( $wpdb->prepare( "delete {$wpdb->options} where option_name = %s", $dbtransient->option_name ) );
-	}
-
-	if ( count( $dbtransients ) == 1000 ) {
-		wp_schedule_single_event( time() + 60, 'delete_expired_transients' );
-		return;
-	}
-
-	$dbsitetransients = $wpdb->get_results( $wpdb->prepare(
-		"SELECT TOP 1000 * from {$wpdb->options}
-			WHERE option_name LIKE %s 
-			AND option_value < %d",
-		$wpdb->esc_like( '_site_transient_timeout_' ) . '%',
-		time()
-	) );
-
-	foreach ( $dbsitetransients as $dbsitetransient ) {
-		$wpdb->query( $wpdb->prepare( "delete {$wpdb->options} where option_name = REPLACE( %s , '_timeout', '')", $dbsitetransient->option_name ) );
-		$wpdb->query( $wpdb->prepare( "delete {$wpdb->options} where option_name = %s", $dbsitetransient->option_name ) );
-	}
-
-	if ( count( $dbsitetransients ) == 1000 ) {
-		wp_schedule_single_event( time() + 60, 'delete_expired_transients' );
-		return;
-	}
-
-	if ( is_multisite() && is_main_site() && is_main_network() ) {
-		// Multisite stores site transients in the sitemeta table.
-		$mssitetransients = $wpdb->get_results( $wpdb->prepare(
-			"SELECT TOP 1000 * from {$wpdb->sitemeta}
-				WHERE meta_key LIKE %s 
-				AND meta_value < %d",
-			$wpdb->esc_like( '_site_transient_timeout_' ) . '%',
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE a, b FROM {$wpdb->options} a, {$wpdb->options} b
+			WHERE a.option_name LIKE %s
+			AND a.option_name NOT LIKE %s
+			AND b.option_name = CONCAT( '_transient_timeout_', SUBSTRING( a.option_name, 12 ) )
+			AND b.option_value < %d",
+			$wpdb->esc_like( '_transient_' ) . '%',
+			$wpdb->esc_like( '_transient_timeout_' ) . '%',
 			time()
-		) );
+		)
+	);
 
-		foreach ( $mssitetransients as $mssitetransient ) {
-			$wpdb->query( $wpdb->prepare( "delete {$wpdb->sitemeta} where meta_key = REPLACE( %s , '_timeout', '')", $mssitetransient->meta_key ) );
-			$wpdb->query( $wpdb->prepare( "delete {$wpdb->sitemeta} where meta_key = %s", $mssitetransient->meta_key ) );
-		}
-
-		if ( count( $mssitetransients ) == 1000 ) {
-			wp_schedule_single_event( time() + 60, 'delete_expired_transients' );
-			return;
-		}
-
+	if ( ! is_multisite() ) {
+		// Single site stores site transients in the options table.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE a, b FROM {$wpdb->options} a, {$wpdb->options} b
+				WHERE a.option_name LIKE %s
+				AND a.option_name NOT LIKE %s
+				AND b.option_name = CONCAT( '_site_transient_timeout_', SUBSTRING( a.option_name, 17 ) )
+				AND b.option_value < %d",
+				$wpdb->esc_like( '_site_transient_' ) . '%',
+				$wpdb->esc_like( '_site_transient_timeout_' ) . '%',
+				time()
+			)
+		);
+	} elseif ( is_multisite() && is_main_site() && is_main_network() ) {
+		// Multisite stores site transients in the sitemeta table.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE a, b FROM {$wpdb->sitemeta} a, {$wpdb->sitemeta} b
+				WHERE a.meta_key LIKE %s
+				AND a.meta_key NOT LIKE %s
+				AND b.meta_key = CONCAT( '_site_transient_timeout_', SUBSTRING( a.meta_key, 17 ) )
+				AND b.meta_value < %d",
+				$wpdb->esc_like( '_site_transient_' ) . '%',
+				$wpdb->esc_like( '_site_transient_timeout_' ) . '%',
+				time()
+			)
+		);
 	}
 }
 

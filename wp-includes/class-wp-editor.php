@@ -1703,7 +1703,7 @@ final class _WP_Editors {
 						}
 					}
 				}
-			};
+			}
 
 			if ( typeof tinymce !== 'undefined' ) {
 				if ( tinymce.Env.ie && tinymce.Env.ie < 11 ) {

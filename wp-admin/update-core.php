@@ -79,8 +79,7 @@ function list_core_update( $update ) {
 	} else {
 		if ( $current ) {
 			/* translators: %s: WordPress version. */
-			$message = sprintf( __( 'If you need to re-install, please check <a href="http://projectnami.org/download/">the Project Nami Download page</a> for the latest build.' ), $version_string );
-			$submit = __('Re-install Now');
+			$submit      = sprintf( __( 'Re-install version %s' ), $version_string );
 			$form_action = 'update-core.php?action=do-core-reinstall';
 		} else {
 			$php_compat = version_compare( $php_version, $update->php_version, '>=' );
@@ -156,7 +155,7 @@ function list_core_update( $update ) {
 	echo '<p>';
 	echo $message;
 	echo '</p>';
-    /*
+
 	echo '<form method="post" action="' . esc_url( $form_action ) . '" name="upgrade" class="upgrade">';
 	wp_nonce_field( 'upgrade-core' );
 
@@ -185,13 +184,13 @@ function list_core_update( $update ) {
 	} elseif ( 'en_US' === $update->locale && 'en_US' !== get_locale() && ( ! $update->packages->partial && $wp_version === $update->partial_version ) ) {
 		// Partial builds don't need language-specific warnings.
 		echo '<p class="hint">' . sprintf(
+			/* translators: %s: WordPress version. */
 			__( 'You are about to install WordPress %s <strong>in English (US)</strong>. There is a chance this update will break your translation. You may prefer to wait for the localized version to be released.' ),
 			'development' !== $update->response ? $update->current : ''
 		) . '</p>';
 	}
 
 	echo '</form>';
-    */
 }
 
 /**
@@ -253,11 +252,15 @@ function core_upgrade_preamble() {
 
 	if ( isset( $updates[0]->version ) && version_compare( $updates[0]->version, $wp_version, '>' ) ) {
 		echo '<h2 class="response">';
-		_e( 'An updated version of WordPress is available. Please check <a href="http://projectnami.org/download/">the Project Nami Download page</a> for the latest build.' );
+		_e( 'An updated version of WordPress is available.' );
 		echo '</h2>';
 
 		$message = sprintf(
-		'<strong>Important:</strong> before updating, please back up your database and files.');
+			/* translators: 1: Documentation on WordPress backups, 2: Documentation on updating WordPress. */
+			__( '<strong>Important:</strong> Before updating, please <a href="%1$s">back up your database and files</a>. For help with updates, visit the <a href="%2$s">Updating WordPress</a> documentation page.' ),
+			__( 'https://wordpress.org/documentation/article/wordpress-backups/' ),
+			__( 'https://wordpress.org/documentation/article/updating-wordpress/' )
+		);
 		wp_admin_notice(
 			$message,
 			array(
@@ -268,7 +271,7 @@ function core_upgrade_preamble() {
 	} elseif ( $is_development_version ) {
 		echo '<h2 class="response">' . __( 'You are using a development version of WordPress.' ) . '</h2>';
 	} else {
-		echo '<h2 class="response">' . __( 'You have Project Nami ' . get_projectnami_version() . ' which contains the latest version of WordPress.' ) . '</h2>';
+		echo '<h2 class="response">' . __( 'You have the latest version of WordPress.' ) . '</h2>';
 	}
 
 	echo '<ul class="core-updates">';
@@ -281,7 +284,7 @@ function core_upgrade_preamble() {
 
 	// Don't show the maintenance mode notice when we are only showing a single re-install option.
 	if ( $updates && ( count( $updates ) > 1 || 'latest' !== $updates[0]->response ) ) {
-		//echo '<p>' . __( 'While your site is being updated, it will be in maintenance mode. As soon as your updates are complete, this mode will be deactivated.' ) . '</p>';
+		echo '<p>' . __( 'While your site is being updated, it will be in maintenance mode. As soon as your updates are complete, this mode will be deactivated.' ) . '</p>';
 	} elseif ( ! $updates ) {
 		list( $normalized_version ) = explode( '-', $wp_version );
 		echo '<p>' . sprintf(

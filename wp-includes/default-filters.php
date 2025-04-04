@@ -11,7 +11,7 @@
  * wp-admin/includes/admin-filters.php.
  *
  * If a hook should only be called from a specific context
- * (admin area, multisite environmentΓÇª), please move it
+ * (admin area, multisite environment…), please move it
  * to a more appropriate file instead.
  *
  * @package WordPress

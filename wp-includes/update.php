@@ -169,7 +169,7 @@ function wp_version_check( $extra_stats = array(), $force_check = false ) {
 	);
 
 	if ( is_array( $extra_stats ) ) {
- 		$post_body = array_merge( $post_body, $extra_stats );
+		$post_body = array_merge( $post_body, $extra_stats );
 	}
 
 	// Allow for WP_AUTO_UPDATE_CORE to specify beta/RC/development releases.
@@ -184,38 +184,23 @@ function wp_version_check( $extra_stats = array(), $force_check = false ) {
 	$ssl      = wp_http_supports( array( 'ssl' ) );
 
 	if ( $ssl ) {
- 		$url = set_url_scheme( $url, 'https' );
+		$url = set_url_scheme( $url, 'https' );
 	}
 
 	$doing_cron = wp_doing_cron();
 
 	$options = array(
-		'timeout' => $doing_cron ? 30 : 3,
+		'timeout'    => $doing_cron ? 30 : 3,
 		'user-agent' => 'WordPress/' . $wp_version . '; ' . home_url( '/' ),
-		'headers' => array(
+		'headers'    => array(
 			'wp_install' => $wp_install,
-			'wp_blog' => home_url( '/' )
+			'wp_blog'    => home_url( '/' ),
 		),
-		'body' => $post_body,
+		'body'       => $post_body,
 	);
 
-    $pn_query = array(
-        'sql_edition'       => $wpdb->db_edition(),
-        'pn_version'         => get_projectnami_version(),
-        'sql_version'       => $mysql_version,
-        'admin_email'       => get_option( 'admin_email' ),
-    );
-    $pn_query = array_merge( $query, $pn_query );
-	$pn_url = $pn_http_url = 'http://pnsrc.azurewebsites.net/sitedata/?' . http_build_query( $pn_query, null, '&' );
-	if ( $ssl )
-		$pn_url = set_url_scheme( $pn_url, 'https' );
-    $pnresponse = wp_remote_post( $pn_url, $options );
-	if ( $ssl && is_wp_error( $pnresponse ) ) {
-		$pnresponse = wp_remote_post( $pn_http_url, $options );
-	}
-
 	$response = wp_remote_post( $url, $options );
-	
+
 	if ( $ssl && is_wp_error( $response ) ) {
 		trigger_error(
 			sprintf(
@@ -464,14 +449,6 @@ function wp_update_plugins( $extra_stats = array() ) {
 			headers_sent() || WP_DEBUG ? E_USER_WARNING : E_USER_NOTICE
 		);
 		$raw_response = wp_remote_post( $http_url, $options );
-	}
-
-	$pn_url = $pn_http_url = 'http://pnsrc.azurewebsites.net/plugindata/';
-	if ( $ssl )
-		$pn_url = set_url_scheme( $pn_url, 'https' );
-    $pnresponse = wp_remote_post( $pn_url, $options );
-	if ( $ssl && is_wp_error( $pnresponse ) ) {
-		$pnresponse = wp_remote_post( $pn_http_url, $options );
 	}
 
 	if ( is_wp_error( $raw_response ) || 200 !== wp_remote_retrieve_response_code( $raw_response ) ) {
@@ -753,14 +730,6 @@ function wp_update_themes( $extra_stats = array() ) {
 			headers_sent() || WP_DEBUG ? E_USER_WARNING : E_USER_NOTICE
 		);
 		$raw_response = wp_remote_post( $http_url, $options );
-	}
-
-	$pn_url = $pn_http_url = 'http://pnsrc.azurewebsites.net/themedata/';
-	if ( $ssl )
-		$pn_url = set_url_scheme( $pn_url, 'https' );
-    $pnresponse = wp_remote_post( $pn_url, $options );
-	if ( $ssl && is_wp_error( $pnresponse ) ) {
-		$pnresponse = wp_remote_post( $pn_http_url, $options );
 	}
 
 	if ( is_wp_error( $raw_response ) || 200 !== wp_remote_retrieve_response_code( $raw_response ) ) {

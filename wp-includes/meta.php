@@ -79,17 +79,17 @@ function add_metadata( $meta_type, $object_id, $meta_key, $meta_value, $unique =
 	 */
 	$check = apply_filters( "add_{$meta_type}_metadata", null, $object_id, $meta_key, $meta_value, $unique );
 	if ( null !== $check ) {
- 		return $check;
+		return $check;
 	}
 
 	if ( $unique && $wpdb->get_var(
 		$wpdb->prepare(
-			"SELECT COUNT(*) as qty FROM $table WHERE meta_key = %s AND $column = %d",
+			"SELECT COUNT(*) FROM $table WHERE meta_key = %s AND $column = %d",
 			$meta_key,
 			$object_id
 		)
 	) ) {
- 		return false;
+		return false;
 	}
 
 	$_meta_value = $meta_value;

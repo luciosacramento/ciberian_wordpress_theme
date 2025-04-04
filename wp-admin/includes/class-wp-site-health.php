@@ -205,7 +205,6 @@ class WP_Site_Health {
 	 * @global wpdb $wpdb WordPress database abstraction object.
 	 */
 	private function prepare_sql_data() {
-		return;
 		global $wpdb;
 
 		$mysql_server_type = $wpdb->db_server_info();
@@ -1292,8 +1291,6 @@ class WP_Site_Health {
 	 * @return array The test results.
 	 */
 	public function get_test_utf8mb4_support() {
-		return;
-
 		if ( ! $this->mysql_server_version ) {
 			$this->prepare_sql_data();
 		}

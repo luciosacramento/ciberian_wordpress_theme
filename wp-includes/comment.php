@@ -130,10 +130,10 @@ function check_comment( $author, $email, $url, $comment, $user_ip, $user_agent, 
 		if ( 'trackback' !== $comment_type && 'pingback' !== $comment_type && '' !== $author && '' !== $email ) {
 			$comment_user = get_user_by( 'email', wp_unslash( $email ) );
 			if ( ! empty( $comment_user->ID ) ) {
-				$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT TOP 1 comment_approved FROM $wpdb->comments WHERE user_id = %d AND comment_approved = '1'", $comment_user->ID ) );
+				$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE user_id = %d AND comment_approved = '1' LIMIT 1", $comment_user->ID ) );
 			} else {
 				// expected_slashed ($author, $email)
-				$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT TOP 1 comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s and comment_approved = '1'", $author, $email ) );
+				$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s and comment_approved = '1' LIMIT 1", $author, $email ) );
 			}
 			if ( ( 1 == $ok_to_comment ) &&
 				( empty( $mod_keys ) || ! str_contains( $email, $mod_keys ) ) ) {
@@ -340,15 +340,15 @@ function get_lastcommentmodified( $timezone = 'server' ) {
 
 	switch ( $timezone ) {
 		case 'gmt':
-			$comment_modified_date = $wpdb->get_var("SELECT TOP 1 comment_date_gmt FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC");
+			$comment_modified_date = $wpdb->get_var( "SELECT comment_date_gmt FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC LIMIT 1" );
 			break;
 		case 'blog':
-			$comment_modified_date = $wpdb->get_var("SELECT TOP 1 comment_date FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC");
+			$comment_modified_date = $wpdb->get_var( "SELECT comment_date FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC LIMIT 1" );
 			break;
 		case 'server':
 			$add_seconds_server = gmdate( 'Z' );
 
-			$comment_modified_date = $wpdb->get_var($wpdb->prepare("SELECT TOP 1 DATEADD(SECOND, %s, comment_date_gmt) FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC", $add_seconds_server));
+			$comment_modified_date = $wpdb->get_var( $wpdb->prepare( "SELECT DATE_ADD(comment_date_gmt, INTERVAL %s SECOND) FROM $wpdb->comments WHERE comment_approved = '1' ORDER BY comment_date_gmt DESC LIMIT 1", $add_seconds_server ) );
 			break;
 	}
 
@@ -657,7 +657,7 @@ function wp_allow_comment( $commentdata, $wp_error = false ) {
 	 * expected_slashed ($comment_post_ID, $comment_author, $comment_author_email, $comment_content)
 	 */
 	$dupe = $wpdb->prepare(
-		"SELECT TOP 1 comment_ID FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_parent = %s AND comment_approved != 'trash' AND ( comment_author = %s ",
+		"SELECT comment_ID FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_parent = %s AND comment_approved != 'trash' AND ( comment_author = %s ",
 		wp_unslash( $commentdata['comment_post_ID'] ),
 		wp_unslash( $commentdata['comment_parent'] ),
 		wp_unslash( $commentdata['comment_author'] )
@@ -669,7 +669,7 @@ function wp_allow_comment( $commentdata, $wp_error = false ) {
 		);
 	}
 	$dupe .= $wpdb->prepare(
-		') AND comment_content = %s',
+		') AND comment_content = %s LIMIT 1',
 		wp_unslash( $commentdata['comment_content'] )
 	);
 
@@ -775,7 +775,7 @@ function wp_allow_comment( $commentdata, $wp_error = false ) {
 		$user        = get_userdata( $commentdata['user_id'] );
 		$post_author = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT TOP 1 post_author FROM $wpdb->posts WHERE ID = %d",
+				"SELECT post_author FROM $wpdb->posts WHERE ID = %d LIMIT 1",
 				$commentdata['comment_post_ID']
 			)
 		);
@@ -878,11 +878,11 @@ function wp_check_comment_flood( $is_flood, $ip, $email, $date, $avoid_die = fal
 		$check_column = '`user_id`';
 	} else {
 		$user         = $ip;
-		$check_column = 'comment_author_IP';
+		$check_column = '`comment_author_IP`';
 	}
 
 	$sql = $wpdb->prepare(
-		"SELECT TOP 1 [comment_date_gmt] FROM [$wpdb->comments] WHERE [comment_date_gmt] >= %s AND ( [$check_column] = %s OR [comment_author_email] = %s ) ORDER BY [comment_date_gmt] DESC",
+		"SELECT `comment_date_gmt` FROM `$wpdb->comments` WHERE `comment_date_gmt` >= %s AND ( $check_column = %s OR `comment_author_email` = %s ) ORDER BY `comment_date_gmt` DESC LIMIT 1",
 		$hour_ago,
 		$user,
 		$email
@@ -2203,7 +2203,6 @@ function wp_throttle_comment_flood( $block, $time_lastcomment, $time_newcomment 
  *     @type string $comment_author_IP    Comment author IP address in IPv4 format. Default is the value of
  *                                        'REMOTE_ADDR' in the `$_SERVER` superglobal sent in the original request.
  * }
- * @return int|false The ID of the comment on success, false on failure.
  * @param bool  $wp_error Should errors be returned as WP_Error objects instead of
  *                        executing wp_die()? Default false.
  * @return int|false|WP_Error The ID of the comment on success, false or WP_Error on failure.
@@ -2747,7 +2746,7 @@ function wp_update_comment_count_now( $post_id ) {
 	$new = apply_filters( 'pre_wp_update_comment_count_now', null, $old, $post_id );
 
 	if ( is_null( $new ) ) {
-		$new = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) as qty FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1'", $post_id ) );
+		$new = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1'", $post_id ) );
 	} else {
 		$new = (int) $new;
 	}
@@ -2973,7 +2972,7 @@ function do_trackbacks( $post ) {
 
 	$to_ping = get_to_ping( $post );
 	$pinged  = get_pung( $post );
-	
+
 	if ( empty( $to_ping ) ) {
 		$wpdb->update( $wpdb->posts, array( 'to_ping' => '' ), array( 'ID' => $post->ID ) );
 		return;
@@ -3408,12 +3407,12 @@ function _close_comments_for_old_post( $open, $post_id ) {
 		return $open;
 	}
 
-	if ( !get_option('close_comments_for_old_posts') ) {
+	if ( ! get_option( 'close_comments_for_old_posts' ) ) {
 		return $open;
 	}
 
 	$days_old = (int) get_option( 'close_comments_days_old' );
-	if ( !$days_old ) {
+	if ( ! $days_old ) {
 		return $open;
 	}
 
@@ -3426,7 +3425,7 @@ function _close_comments_for_old_post( $open, $post_id ) {
 	}
 
 	// Undated drafts should not show up as comments closed.
-	if ( '0001-01-01 00:00:00' === $post->post_date_gmt ) {
+	if ( '0000-00-00 00:00:00' === $post->post_date_gmt ) {
 		return $open;
 	}
 
@@ -3679,7 +3678,6 @@ function wp_handle_comment_submission( $comment_data ) {
 	}
 
 	return get_comment( $comment_id );
-
 }
 
 /**
@@ -3947,7 +3945,7 @@ function _wp_batch_update_comment_type() {
 	$lock_name = 'update_comment_type.lock';
 
 	// Try to lock.
-	$lock_result = $wpdb->query_with_params( "IF NOT EXISTS (SELECT * FROM [$wpdb->options] with (nolock) WHERE [option_name] = ?) INSERT INTO [$wpdb->options] ([option_name], [option_value], [autoload]) VALUES (?, ?, ?) else UPDATE [$wpdb->options] set [option_value] = ?, [autoload] = ? where [option_name] = ?", array( array($lock_name, SQLSRV_PARAM_IN), array($lock_name, SQLSRV_PARAM_IN), array(time(), SQLSRV_PARAM_IN), array("no", SQLSRV_PARAM_IN), array(time(), SQLSRV_PARAM_IN), array("no", SQLSRV_PARAM_IN), array($lock_name, SQLSRV_PARAM_IN) ) );
+	$lock_result = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", $lock_name, time() ) );
 
 	if ( ! $lock_result ) {
 		$lock_result = get_option( $lock_name );
@@ -3964,9 +3962,9 @@ function _wp_batch_update_comment_type() {
 
 	// Check if there's still an empty comment type.
 	$empty_comment_type = $wpdb->get_var(
-		"SELECT TOP 1 comment_ID FROM $wpdb->comments
+		"SELECT comment_ID FROM $wpdb->comments
 		WHERE comment_type = ''
-		"
+		LIMIT 1"
 	);
 
 	// No empty comment type, we're done here.
@@ -3991,11 +3989,11 @@ function _wp_batch_update_comment_type() {
 	// Get the IDs of the comments to update.
 	$comment_ids = $wpdb->get_col(
 		$wpdb->prepare(
-			"SELECT TOP %d comment_ID
+			"SELECT comment_ID
 			FROM {$wpdb->comments}
 			WHERE comment_type = ''
 			ORDER BY comment_ID DESC
-			",
+			LIMIT %d",
 			$comment_batch_size
 		)
 	);

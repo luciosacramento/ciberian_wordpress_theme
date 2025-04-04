@@ -42,28 +42,28 @@ function media_upload_tabs() {
  * @return array $tabs with gallery if post has image attachment
  */
 function update_gallery_tab( $tabs ) {
- 	global $wpdb;
- 
+	global $wpdb;
+
 	if ( ! isset( $_REQUEST['post_id'] ) ) {
 		unset( $tabs['gallery'] );
- 		return $tabs;
- 	}
- 
+		return $tabs;
+	}
+
 	$post_id = (int) $_REQUEST['post_id'];
- 
+
 	if ( $post_id ) {
 		$attachments = (int) $wpdb->get_var( $wpdb->prepare( "SELECT count(*) FROM $wpdb->posts WHERE post_type = 'attachment' AND post_status != 'trash' AND post_parent = %d", $post_id ) );
 	}
- 
+
 	if ( empty( $attachments ) ) {
 		unset( $tabs['gallery'] );
- 		return $tabs;
- 	}
- 
+		return $tabs;
+	}
+
 	/* translators: %s: Number of attachments. */
 	$tabs['gallery'] = sprintf( __( 'Gallery (%s)' ), "<span id='attachments-count'>$attachments</span>" );
- 
- 	return $tabs;
+
+	return $tabs;
 }
 
 /**
@@ -2775,7 +2775,6 @@ function media_upload_library_form( $errors ) {
 			$_GET['post_mime_type']                        = $type;
 			list($post_mime_types, $avail_post_mime_types) = wp_edit_attachments_query();
 		}
-
 		if ( empty( $_GET['post_mime_type'] ) || 'all' === $_GET['post_mime_type'] ) {
 			$class = ' class="current"';
 		} else {
@@ -2846,7 +2845,7 @@ function media_upload_library_form( $errors ) {
 	<div class="alignleft actions">
 		<?php
 
-		$arc_query = "SELECT DISTINCT YEAR(post_date) AS yyear, MONTH(post_date) AS mmonth FROM $wpdb->posts WHERE post_type = 'attachment' ORDER BY YEAR(post_date) DESC, MONTH(post_date) DESC";
+		$arc_query = "SELECT DISTINCT YEAR(post_date) AS yyear, MONTH(post_date) AS mmonth FROM $wpdb->posts WHERE post_type = 'attachment' ORDER BY post_date DESC";
 
 		$arc_result = $wpdb->get_results( $arc_query );
 

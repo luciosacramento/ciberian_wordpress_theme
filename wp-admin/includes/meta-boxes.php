@@ -242,7 +242,7 @@ function post_submit_meta_box( $post, $args = array() ) {
 			} elseif ( 'publish' === $post->post_status || 'private' === $post->post_status ) { // Already published.
 				/* translators: Post date information. %s: Date on which the post was published. */
 				$stamp = __( 'Published on: %s' );
-			} elseif ( '0001-01-01 00:00:00' === $post->post_date_gmt ) { // Draft, 1 or more saves, no date specified.
+			} elseif ( '0000-00-00 00:00:00' === $post->post_date_gmt ) { // Draft, 1 or more saves, no date specified.
 				$stamp = __( 'Publish <b>immediately</b>' );
 			} elseif ( time() < strtotime( $post->post_date_gmt . ' +0000' ) ) { // Draft, 1 or more saves, future date specified.
 				/* translators: Post date information. %s: Date on which the post is to be published. */

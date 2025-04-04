@@ -4328,17 +4328,17 @@ function wp_insert_post( $postarr, $wp_error = false, $fire_after_hooks = true )
 		}
 	}
 
-	if ( empty( $postarr['post_date_gmt'] ) || '0001-01-01 00:00:00' === $postarr['post_date_gmt'] ) {
+	if ( empty( $postarr['post_date_gmt'] ) || '0000-00-00 00:00:00' === $postarr['post_date_gmt'] ) {
 		if ( ! in_array( $post_status, get_post_stati( array( 'date_floating' => true ) ), true ) ) {
 			$post_date_gmt = get_gmt_from_date( $post_date );
 		} else {
-			$post_date_gmt = '0001-01-01 00:00:00';
+			$post_date_gmt = '0000-00-00 00:00:00';
 		}
 	} else {
 		$post_date_gmt = $postarr['post_date_gmt'];
 	}
 
-	if ( $update || '0001-01-01 00:00:00' === $post_date ) {
+	if ( $update || '0000-00-00 00:00:00' === $post_date ) {
 		$post_modified     = current_time( 'mysql' );
 		$post_modified_gmt = current_time( 'mysql', 1 );
 	} else {
@@ -4561,9 +4561,7 @@ function wp_insert_post( $postarr, $wp_error = false, $fire_after_hooks = true )
 		if ( ! empty( $import_id ) ) {
 			$import_id = (int) $import_id;
 
-			if ( ! $wpdb->get_var( $wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE ID = %d", $import_id) ) ) {
-				$enable_identity_insert = "SET IDENTITY_INSERT $wpdb->posts ON";
-				sqlsrv_query( $wpdb->dbh, $enable_identity_insert );
+			if ( ! $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE ID = %d", $import_id ) ) ) {
 				$data['ID'] = $import_id;
 			}
 		}
@@ -4579,10 +4577,6 @@ function wp_insert_post( $postarr, $wp_error = false, $fire_after_hooks = true )
 				return new WP_Error( 'db_insert_error', $message, $wpdb->last_error );
 			} else {
 				return 0;
-			}
-			if( !empty($data[ 'ID' ])) {
-				$enable_identity_insert = "SET IDENTITY_INSERT $wpdb->posts OFF";
-				sqlsrv_query( $wpdb->dbh, $enable_identity_insert );
 			}
 		}
 
@@ -4870,7 +4864,7 @@ function wp_insert_post( $postarr, $wp_error = false, $fire_after_hooks = true )
  */
 function wp_update_post( $postarr = array(), $wp_error = false, $fire_after_hooks = true ) {
 	if ( is_object( $postarr ) ) {
- 		// Non-escaped post was passed.
+		// Non-escaped post was passed.
 		$postarr = get_object_vars( $postarr );
 		$postarr = wp_slash( $postarr );
 	}
@@ -4880,7 +4874,7 @@ function wp_update_post( $postarr = array(), $wp_error = false, $fire_after_hook
 
 	if ( is_null( $post ) ) {
 		if ( $wp_error ) {
- 			return new WP_Error( 'invalid_post', __( 'Invalid post ID.' ) );
+			return new WP_Error( 'invalid_post', __( 'Invalid post ID.' ) );
 		}
 		return 0;
 	}
@@ -4892,26 +4886,26 @@ function wp_update_post( $postarr = array(), $wp_error = false, $fire_after_hook
 	if ( isset( $postarr['post_category'] ) && is_array( $postarr['post_category'] )
 		&& count( $postarr['post_category'] ) > 0
 	) {
- 		$post_cats = $postarr['post_category'];
+		$post_cats = $postarr['post_category'];
 	} else {
- 		$post_cats = $post['post_category'];
+		$post_cats = $post['post_category'];
 	}
 
 	// Drafts shouldn't be assigned a date unless explicitly done so by the user.
 	if ( isset( $post['post_status'] )
 		&& in_array( $post['post_status'], array( 'draft', 'pending', 'auto-draft' ), true )
-		&& empty( $postarr['edit_date'] ) && ( '0001-01-01 00:00:00' === $post['post_date_gmt'] )
+		&& empty( $postarr['edit_date'] ) && ( '0000-00-00 00:00:00' === $post['post_date_gmt'] )
 	) {
- 		$clear_date = true;
+		$clear_date = true;
 	} else {
- 		$clear_date = false;
+		$clear_date = false;
 	}
 
 	// Merge old and new fields with new fields overwriting old ones.
-	$postarr                  = array_merge($post, $postarr);
+	$postarr                  = array_merge( $post, $postarr );
 	$postarr['post_category'] = $post_cats;
 	if ( $clear_date ) {
-		$postarr['post_date']     = current_time('mysql');
+		$postarr['post_date']     = current_time( 'mysql' );
 		$postarr['post_date_gmt'] = '';
 	}
 
@@ -5063,8 +5057,8 @@ function check_and_publish_future_post( $post ) {
  */
 function wp_resolve_post_date( $post_date = '', $post_date_gmt = '' ) {
 	// If the date is empty, set the date to now.
-	if ( empty( $post_date ) || '0001-01-01 00:00:00' === $post_date ) {
-		if ( empty( $post_date_gmt ) || '0001-01-01 00:00:00' === $post_date_gmt ) {
+	if ( empty( $post_date ) || '0000-00-00 00:00:00' === $post_date ) {
+		if ( empty( $post_date_gmt ) || '0000-00-00 00:00:00' === $post_date_gmt ) {
 			$post_date = current_time( 'mysql' );
 		} else {
 			$post_date = get_date_from_gmt( $post_date_gmt );
@@ -5103,7 +5097,7 @@ function wp_unique_post_slug( $slug, $post_id, $post_status, $post_type, $post_p
 	if ( in_array( $post_status, array( 'draft', 'pending', 'auto-draft' ), true )
 		|| ( 'inherit' === $post_status && 'revision' === $post_type ) || 'user_request' === $post_type
 	) {
- 		return $slug;
+		return $slug;
 	}
 
 	/**
@@ -5132,12 +5126,12 @@ function wp_unique_post_slug( $slug, $post_id, $post_status, $post_type, $post_p
 
 	$feeds = $wp_rewrite->feeds;
 	if ( ! is_array( $feeds ) ) {
- 		$feeds = array();
+		$feeds = array();
 	}
 
 	if ( 'attachment' === $post_type ) {
 		// Attachment slugs must be unique across all types.
-		$check_sql = "SELECT TOP 1 post_name FROM $wpdb->posts WHERE post_name = %s AND ID != %d";
+		$check_sql       = "SELECT post_name FROM $wpdb->posts WHERE post_name = %s AND ID != %d LIMIT 1";
 		$post_name_check = $wpdb->get_var( $wpdb->prepare( $check_sql, $slug, $post_id ) );
 
 		/**
@@ -5164,14 +5158,14 @@ function wp_unique_post_slug( $slug, $post_id, $post_status, $post_type, $post_p
 		}
 	} elseif ( is_post_type_hierarchical( $post_type ) ) {
 		if ( 'nav_menu_item' === $post_type ) {
- 			return $slug;
+			return $slug;
 		}
 
 		/*
 		 * Page slugs must be unique within their own trees. Pages are in a separate
 		 * namespace than posts so page slugs are allowed to overlap post slugs.
 		 */
-		$check_sql = "SELECT TOP 1 post_name FROM $wpdb->posts WHERE post_name = %s AND post_type IN ( %s, 'attachment' ) AND ID != %d AND post_parent = %d";
+		$check_sql       = "SELECT post_name FROM $wpdb->posts WHERE post_name = %s AND post_type IN ( %s, 'attachment' ) AND ID != %d AND post_parent = %d LIMIT 1";
 		$post_name_check = $wpdb->get_var( $wpdb->prepare( $check_sql, $slug, $post_type, $post_id, $post_parent ) );
 
 		/**
@@ -5201,7 +5195,7 @@ function wp_unique_post_slug( $slug, $post_id, $post_status, $post_type, $post_p
 		}
 	} else {
 		// Post slugs must be unique across all posts.
-		$check_sql = "SELECT TOP 1 post_name FROM $wpdb->posts WHERE post_name = %s AND post_type = %s AND ID != %d";
+		$check_sql       = "SELECT post_name FROM $wpdb->posts WHERE post_name = %s AND post_type = %s AND ID != %d LIMIT 1";
 		$post_name_check = $wpdb->get_var( $wpdb->prepare( $check_sql, $slug, $post_type, $post_id ) );
 
 		$post = get_post( $post_id );
@@ -7283,14 +7277,14 @@ function _get_last_post_time( $timezone, $field, $post_type = 'any' ) {
 
 	switch ( $timezone ) {
 		case 'gmt':
-			$date = $wpdb->get_var("SELECT MAX(post_{$field}_gmt) as [post_{$field}_gmt] FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types})");
+			$date = $wpdb->get_var( "SELECT post_{$field}_gmt FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types}) ORDER BY post_{$field}_gmt DESC LIMIT 1" );
 			break;
 		case 'blog':
-			$date = $wpdb->get_var("SELECT MAX(post_{$field}) as [post_{$field}] FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types})");
+			$date = $wpdb->get_var( "SELECT post_{$field} FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types}) ORDER BY post_{$field}_gmt DESC LIMIT 1" );
 			break;
 		case 'server':
 			$add_seconds_server = gmdate( 'Z' );
-			$date = $wpdb->get_var("SELECT MAX(DATEADD(SECOND, $add_seconds_server, post_{$field}_gmt)) as [post_{$field}_gmt] FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types})");
+			$date               = $wpdb->get_var( "SELECT DATE_ADD(post_{$field}_gmt, INTERVAL '$add_seconds_server' SECOND) FROM $wpdb->posts WHERE post_status = 'publish' AND post_type IN ({$post_types}) ORDER BY post_{$field}_gmt DESC LIMIT 1" );
 			break;
 	}
 
@@ -7773,7 +7767,7 @@ function wp_delete_auto_drafts() {
 	global $wpdb;
 
 	// Cleanup old auto-drafts more than 7 days old.
-	$old_posts = $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_status = 'auto-draft' AND DATEADD( DAY, -7, GETDATE() ) > post_date" );
+	$old_posts = $wpdb->get_col( "SELECT ID FROM $wpdb->posts WHERE post_status = 'auto-draft' AND DATE_SUB( NOW(), INTERVAL 7 DAY ) > post_date" );
 	foreach ( (array) $old_posts as $delete ) {
 		// Force delete.
 		wp_delete_post( $delete, true );

@@ -318,27 +318,18 @@ class WP_Meta_Query {
 	 */
 	public function get_cast_for_type( $type = '' ) {
 		if ( empty( $type ) ) {
- 			return 'NVARCHAR';
+			return 'CHAR';
 		}
 
 		$meta_type = strtoupper( $type );
 
 		if ( ! preg_match( '/^(?:BINARY|CHAR|DATE|DATETIME|SIGNED|UNSIGNED|TIME|NUMERIC(?:\(\d+(?:,\s?\d+)?\))?|DECIMAL(?:\(\d+(?:,\s?\d+)?\))?)$/', $meta_type ) ) {
- 			return 'NVARCHAR';
+			return 'CHAR';
 		}
 
-        switch ( $meta_type ){
-            case 'SIGNED' :
-            case 'UNSIGNED' :
-            case 'NUMERIC' :
-                $meta_type = 'INT';
-				break;
-			case 'DATE' :
-			case 'DATETIME' :
-			case 'TIME' :
-				$meta_type = 'DATETIME2';
-				break;
-        }
+		if ( 'NUMERIC' === $meta_type ) {
+			$meta_type = 'SIGNED';
+		}
 
 		return $meta_type;
 	}
@@ -668,9 +659,9 @@ class WP_Meta_Query {
 					$this->table_aliases[] = $subquery_alias;
 
 					$meta_compare_string_start  = 'NOT EXISTS (';
-					$meta_compare_string_start .= "SELECT TOP 1 1 FROM $wpdb->postmeta $subquery_alias ";
+					$meta_compare_string_start .= "SELECT 1 FROM $wpdb->postmeta $subquery_alias ";
 					$meta_compare_string_start .= "WHERE $subquery_alias.post_ID = $alias.post_ID ";
-					$meta_compare_string_end    = '';
+					$meta_compare_string_end    = 'LIMIT 1';
 					$meta_compare_string_end   .= ')';
 				}
 

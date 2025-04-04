@@ -72,7 +72,7 @@ function _get_cron_lock() {
 		 */
 		$value = wp_cache_get( 'doing_cron', 'transient', true );
 	} else {
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT TOP 1 option_value FROM $wpdb->options WHERE option_name = %s", '_transient_doing_cron' ) );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s LIMIT 1", '_transient_doing_cron' ) );
 		if ( is_object( $row ) ) {
 			$value = $row->option_value;
 		}
@@ -93,7 +93,7 @@ $doing_cron_transient = get_transient( 'doing_cron' );
 
 // Use global $doing_wp_cron lock, otherwise use the GET lock. If no lock, try to grab a new lock.
 if ( empty( $doing_wp_cron ) ) {
-	if ( empty( $_GET[ 'doing_wp_cron' ] ) ) {
+	if ( empty( $_GET['doing_wp_cron'] ) ) {
 		// Called from external script/job. Try setting a lock.
 		if ( $doing_cron_transient && ( $doing_cron_transient + WP_CRON_LOCK_TIMEOUT > $gmt_time ) ) {
 			return;

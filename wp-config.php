@@ -20,25 +20,23 @@
 
 // ** Database settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
-define( 'DB_NAME', 'wordpress' );
+define( 'DB_NAME', 'wp_cenoura' );
 
 /** Database username */
-define( 'DB_USER', '' );
+define( 'DB_USER', 'root' );
 
 /** Database password */
 define( 'DB_PASSWORD', '' );
 
-/** Database hostname */
-define( 'DB_HOST', 'DESKTOP-8NMJQTQ' );
+/** nome do host do MySQL */
+//define('DB_HOST', '10.15.246.42');
+define( 'DB_HOST', 'localhost' );
 
-/** Database charset to use in creating database tables. */
-define( 'DB_CHARSET', 'utf8' );
+/** Conjunto de caracteres do banco de dados a ser usado na criação das tabelas. */
+define('DB_CHARSET', 'utf8');
 
-/** The database collate type. Don't change this if in doubt. */
-define( 'DB_COLLATE', '' );
-
-// Para usar o SQL Server
-define( 'DB_TYPE', 'sqlsrv' );
+/** O tipo de collate do banco de dados. Não altere isso se tiver dúvidas. */
+define('DB_COLLATE', 'utf8_general_ci');
 
 /**#@+
  * Authentication unique keys and salts.

@@ -373,22 +373,16 @@ class WP_Network_Query {
 		$offset = absint( $this->query_vars['offset'] );
 		$limits = '';
 
-		// Disable LIMIT when no ORDER BY
-		if ( ! $orderby ) {
-			$limits = '';
-		} elseif ( ! empty( $number ) ) {
+		if ( ! empty( $number ) ) {
 			if ( $offset ) {
-				$limits = 'OFFSET ' . $offset . ' ROWS FETCH NEXT ' . $number . ' ROWS ONLY';
+				$limits = 'LIMIT ' . $offset . ',' . $number;
 			} else {
-				$limits = 'OFFSET 0 ROWS FETCH NEXT ' . $number . ' ROWS ONLY';
+				$limits = 'LIMIT ' . $number;
 			}
 		}
 
 		if ( $this->query_vars['count'] ) {
-			$fields = 'COUNT(*) as qty';
-			$orderby = ''; // ORDER BY breaks in MSSQL here since comment_date_gmt won't be in the query statement.
-			$order = '';
-			$limits = '';
+			$fields = 'COUNT(*)';
 		} else {
 			$fields = "$wpdb->site.id";
 		}
@@ -476,7 +470,12 @@ class WP_Network_Query {
 			$orderby = "ORDER BY $orderby";
 		}
 
-		$this->sql_clauses['select']  = "SELECT $fields";
+		$found_rows = '';
+		if ( ! $this->query_vars['no_found_rows'] ) {
+			$found_rows = 'SQL_CALC_FOUND_ROWS';
+		}
+
+		$this->sql_clauses['select']  = "SELECT $found_rows $fields";
 		$this->sql_clauses['from']    = "FROM $wpdb->site $join";
 		$this->sql_clauses['groupby'] = $groupby;
 		$this->sql_clauses['orderby'] = $orderby;
@@ -496,10 +495,6 @@ class WP_Network_Query {
 		}
 
 		$network_ids = $wpdb->get_col( $this->request );
-
-		if ( ! $this->query_vars['no_found_rows'] ) {
-			$wpdb->query("select count(*) as [found_rows] {$this->sql_clauses['from']} {$where} {$this->sql_clauses['groupby']}");
-		}
 
 		return array_map( 'intval', $network_ids );
 	}
@@ -526,8 +521,7 @@ class WP_Network_Query {
 			 */
 			$found_networks_query = apply_filters( 'found_networks_query', 'SELECT FOUND_ROWS()', $this );
 
-			//$this->found_networks = (int) $wpdb->get_var( $found_networks_query );
-            $this->found_networks = $wpdb->last_query_total_rows;
+			$this->found_networks = (int) $wpdb->get_var( $found_networks_query );
 		}
 	}
 
@@ -580,7 +574,7 @@ class WP_Network_Query {
 			$parsed      = "FIELD( {$wpdb->site}.id, $network__in )";
 		} elseif ( 'domain_length' === $orderby || 'path_length' === $orderby ) {
 			$field  = substr( $orderby, 0, -7 );
-			$parsed = "LEN($wpdb->site.$field)";
+			$parsed = "CHAR_LENGTH($wpdb->site.$field)";
 		} elseif ( in_array( $orderby, $allowed_keys, true ) ) {
 			$parsed = "$wpdb->site.$orderby";
 		}

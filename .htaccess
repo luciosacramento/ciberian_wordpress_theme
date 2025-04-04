@@ -6,11 +6,11 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-RewriteBase /ciberian_wordpress/
+RewriteBase /ciberian_wordpress_theme/
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /ciberian_wordpress/index.php [L]
+RewriteRule . /ciberian_wordpress_theme/index.php [L]
 </IfModule>
 
 # END WordPress

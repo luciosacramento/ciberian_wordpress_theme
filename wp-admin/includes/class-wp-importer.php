@@ -29,20 +29,14 @@ class WP_Importer {
 		// Grab all posts in chunks.
 		do {
 			$meta_key = $importer_name . '_' . $blog_id . '_permalink';
-			
-			/*
-			 * PN Mod: Start
-			 * Replace MySQL LIMIT with MSSQL's OFFSET FETCH.
-			 */
-			$sql = $wpdb->prepare( "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '%s' ORDER BY post_id OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", $meta_key, $offset, $limit );
-			// PN Mod: End
+			$sql      = $wpdb->prepare( "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = %s LIMIT %d,%d", $meta_key, $offset, $limit );
 			$results  = $wpdb->get_results( $sql );
 
 			// Increment offset.
 			$offset = ( $limit + $offset );
 
 			if ( ! empty( $results ) ) {
- 				foreach ( $results as $r ) {
+				foreach ( $results as $r ) {
 					// Set permalinks into array.
 					$hashtable[ $r->meta_value ] = (int) $r->post_id;
 				}
@@ -97,24 +91,19 @@ class WP_Importer {
 
 		// Grab all comments in chunks.
 		do {
-			/*
-			* PN Mod: Start
-			* Replace MySQL LIMIT with MSSQL's OFFSET FETCH.
-			*/
-			$sql = $wpdb->prepare( "SELECT comment_ID, comment_agent FROM $wpdb->comments ORDER BY comment_ID DESC OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", $offset, $limit );
-			// PN Mod: End
+			$sql     = $wpdb->prepare( "SELECT comment_ID, comment_agent FROM $wpdb->comments LIMIT %d,%d", $offset, $limit );
 			$results = $wpdb->get_results( $sql );
 
 			// Increment offset.
 			$offset = ( $limit + $offset );
 
 			if ( ! empty( $results ) ) {
- 				foreach ( $results as $r ) {
+				foreach ( $results as $r ) {
 					// Explode comment_agent key.
 					list ( $comment_agent_blog_id, $source_comment_id ) = explode( '-', $r->comment_agent );
 
 					$source_comment_id = (int) $source_comment_id;
- 
+
 					// Check if this comment came from this blog.
 					if ( (int) $blog_id === (int) $comment_agent_blog_id ) {
 						$hashtable[ $source_comment_id ] = (int) $r->comment_ID;

@@ -872,11 +872,10 @@ class WP_Debug_Data {
 			$extension = null;
 		}
 
-		 /*
 		$server = $wpdb->get_var( 'SELECT VERSION()' );
 
 		$client_version = $wpdb->dbh->client_info;
-		*/
+
 		$info['wp-database']['fields']['extension'] = array(
 			'label' => __( 'Extension' ),
 			'value' => $extension,

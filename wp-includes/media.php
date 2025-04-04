@@ -4635,10 +4635,11 @@ function wp_enqueue_media( $args = array() ) {
 	$show_audio_playlist = apply_filters( 'media_library_show_audio_playlist', true );
 	if ( null === $show_audio_playlist ) {
 		$show_audio_playlist = $wpdb->get_var(
-			"SELECT TOP 1 ID
+			"SELECT ID
 			FROM $wpdb->posts
 			WHERE post_type = 'attachment'
-			AND post_mime_type LIKE 'audio%'"
+			AND post_mime_type LIKE 'audio%'
+			LIMIT 1"
 		);
 	}
 
@@ -4662,10 +4663,11 @@ function wp_enqueue_media( $args = array() ) {
 	$show_video_playlist = apply_filters( 'media_library_show_video_playlist', true );
 	if ( null === $show_video_playlist ) {
 		$show_video_playlist = $wpdb->get_var(
-			"SELECT TOP 1 ID
+			"SELECT ID
 			FROM $wpdb->posts
 			WHERE post_type = 'attachment'
-			AND post_mime_type LIKE 'video%'"
+			AND post_mime_type LIKE 'video%'
+			LIMIT 1"
 		);
 	}
 
@@ -4691,7 +4693,7 @@ function wp_enqueue_media( $args = array() ) {
 				"SELECT DISTINCT YEAR( post_date ) AS year, MONTH( post_date ) AS month
 				FROM $wpdb->posts
 				WHERE post_type = %s
-				ORDER BY YEAR( post_date ) DESC, MONTH( post_date ) DESC",
+				ORDER BY post_date DESC",
 				'attachment'
 			)
 		);
