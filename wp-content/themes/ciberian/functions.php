@@ -1233,7 +1233,7 @@ function get_custom_page_by_slug($data) {
     }
 }
 
-/****************Pegar paginas****************** */
+/****************Pegar paginas****************** *
 
 function register_paginas() {
     register_rest_route('custom/v1', '/paginas/', array(
@@ -1285,6 +1285,63 @@ function obter_paginas() {
     }
 }
 
+*/
+
+function register_paginas() {
+    register_rest_route('custom/v1', '/paginas/', array(
+        'methods'  => 'GET',
+        'callback' => 'obter_paginas_do_menu',
+        'args'     => array(
+            'menu' => array(
+                'required' => true,
+                'validate_callback' => function ($param) {
+                    return is_string($param);
+                }
+            ),
+        ),
+        'permission_callback' => '__return_true'
+    ));
+}
+add_action('rest_api_init', 'register_paginas');
+
+function obter_paginas_do_menu($request) {
+    $menu_slug = $request->get_param('menu');
+
+    // Recupera o objeto do menu pelo slug
+    $menu = wp_get_nav_menu_object($menu_slug);
+
+    if (!$menu) {
+        return new WP_Error('menu_nao_encontrado', 'Menu não encontrado.', array('status' => 404));
+    }
+
+    // Pega os itens do menu
+    $menu_items = wp_get_nav_menu_items($menu->term_id);
+
+    if (!$menu_items || empty($menu_items)) {
+        return new WP_Error('itens_vazios', 'Nenhum item encontrado no menu.', array('status' => 404));
+    }
+
+    $resposta = [];
+
+    foreach ($menu_items as $item) {
+        if ($item->object === 'page') {
+            $page_id = $item->object_id;
+            $resposta[] = array(
+                'id'           => $page_id,
+                'slug'         => get_post_field('post_name', $page_id),
+                'titulo'       => get_the_title($page_id),
+                'resumo'       => get_the_excerpt($page_id),
+                'conteudo'     => apply_filters('the_content', get_post_field('post_content', $page_id)),
+                'pagina_interna' => (bool) get_post_meta($page_id, '_pagina_interna', true),
+                'url'          => get_permalink($page_id),
+                'menu_title'   => $item->title
+            );
+        }
+    }
+
+    return rest_ensure_response($resposta);
+}
+
 /********************RECAPTCHA GOOGLE**********************/
 
 add_action('rest_api_init', function () {
@@ -1334,3 +1391,13 @@ function verify_recaptcha(WP_REST_Request $request) {
         ], 400);
     }
 }
+
+function registrar_meus_menus() {
+    register_nav_menus(
+        array(
+            'menu-producao' => __( 'Menu Produção' ),
+            'menu-homologacao'    => __( 'Menu do Homologação' ),
+        )
+    );
+}
+add_action( 'after_setup_theme', 'registrar_meus_menus' );
