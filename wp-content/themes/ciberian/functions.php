@@ -1293,7 +1293,7 @@ function register_paginas() {
         'callback' => 'obter_paginas_do_menu',
         'args'     => array(
             'menu' => array(
-                'required' => true,
+                'required' => false,
                 'validate_callback' => function ($param) {
                     return is_string($param);
                 }
@@ -1305,7 +1305,12 @@ function register_paginas() {
 add_action('rest_api_init', 'register_paginas');
 
 function obter_paginas_do_menu($request) {
+
     $menu_slug = $request->get_param('menu');
+
+    if (empty($menu_slug)) {
+        $menu_slug = 'menu-producao';
+    }
 
     // Recupera o objeto do menu pelo slug
     $menu = wp_get_nav_menu_object($menu_slug);
