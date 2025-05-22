@@ -1,28 +1,27 @@
 <?php
 header("Content-Type: application/json");
 
-$http_origin = $_SERVER['HTTP_ORIGIN'];
+$allowed_origins = ["https://www.ciberian.com.br", "https://ciberian-site.vercel.app"];
+$http_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-if ($http_origin == "https://www.ciberian.com.br" || $http_origin == "https://ciberian-site.vercel.app") {  
-    // Define os cabeçalhos para todas as requisições
+if (in_array($http_origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $http_origin");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
     header("Access-Control-Allow-Credentials: true");
+}
 
-    // Se for uma requisição OPTIONS (preflight), finalize com um status 200
-    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-        // Certifique-se de configurar os mesmos cabeçalhos no preflight
-        header("Access-Control-Allow-Origin: $http_origin");
-        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-        header("Access-Control-Allow-Headers: Content-Type, Authorization");
-        header("Access-Control-Allow-Credentials: true");
-        exit(0); // Finaliza a requisição com sucesso
-    }
+// Se for preflight OPTIONS, responder e sair ANTES de carregar o WordPress
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(204); // Sem conteúdo
+    exit;
 }
 
 // Carregar o WordPress
 define('WP_USE_THEMES', false);
+require_once explode("wp-content", __FILE__)[0] . 'wp-load.php';
+global $wp_query;
+
 $dir = dirname(__FILE__);
 $dir = explode("wp-content", $dir);
 $dir = $dir[0] . 'wp-blog-header.php';
@@ -31,7 +30,6 @@ $dir = dirname(__FILE__);
 $dir = explode("wp-content", $dir);
 $dir = $dir[0] . 'wp-load.php';
 require($dir);
-global $wp_query;
 
 // Captura os dados do formulário
 $nome     = sanitize_text_field($_POST["nome"]);
@@ -128,6 +126,7 @@ if (wp_mail($to, $title, $message, $headers)) {
         'status'  => 'ok',
     );
     http_response_code(200);
+    
 } else {
     // Resposta de erro
     $response = array(
